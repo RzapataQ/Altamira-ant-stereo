@@ -18,14 +18,21 @@ export default function SuccessPage() {
   const [visitor, setVisitor] = useState<(typeof visitors)[0] | null>(null)
 
   useEffect(() => {
+    console.log("[v0] Success page - Looking for visitor ID:", visitorId)
+    console.log("[v0] Success page - Total visitors in store:", visitors.length)
+
     if (visitorId) {
       const found = visitors.find((v) => v.id === visitorId)
       if (found) {
+        console.log("[v0] Success page - Visitor found:", found.id)
+        console.log("[v0] Success page - QR data:", found.qrData)
         setVisitor(found)
       } else {
+        console.log("[v0] Success page - Visitor NOT found, redirecting to home")
         router.push("/")
       }
     } else {
+      console.log("[v0] Success page - No visitor ID in URL, redirecting to home")
       router.push("/")
     }
   }, [visitorId, visitors, router])

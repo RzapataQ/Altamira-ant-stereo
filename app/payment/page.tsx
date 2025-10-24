@@ -60,6 +60,8 @@ export default function PaymentPage() {
     const visitorId = `V${Date.now()}`
     const paymentMethodText = paymentMethod === "credit-card" ? "Tarjeta de crédito" : "Efectivo/Nequi"
 
+    console.log("[v0] Creating visitor with ID:", visitorId)
+
     const visitor: Visitor = {
       id: visitorId,
       child: currentChild,
@@ -79,8 +81,10 @@ export default function PaymentPage() {
     }
 
     visitor.qrData = generateQRData(visitor)
+    console.log("[v0] Generated QR data:", visitor.qrData)
 
     addVisitor(visitor)
+    console.log("[v0] Visitor added to store")
 
     const purchase = {
       id: `P${Date.now()}`,
@@ -92,7 +96,8 @@ export default function PaymentPage() {
     }
 
     addPurchase(purchase)
-    clearRegistration()
+    console.log("[v0] Purchase added, redirecting to success page")
+
     router.push(`/success?visitorId=${visitor.id}`)
   }
 
