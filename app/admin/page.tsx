@@ -22,6 +22,8 @@ import {
   Edit,
   Trash2,
   UserPlus,
+  Camera,
+  Video,
 } from "lucide-react"
 import Link from "next/link"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -52,6 +54,10 @@ export default function AdminPage() {
   const addUser = useStore((state) => state.addUser)
   const updateUser = useStore((state) => state.updateUser)
   const deleteUser = useStore((state) => state.deleteUser)
+  const cameras = useStore((state) => state.getAllCameras())
+  const addCamera = useStore((state) => state.addCamera)
+  const updateCamera = useStore((state) => state.updateCamera)
+  const deleteCamera = useStore((state) => state.deleteCamera)
   const router = useRouter()
 
   const [editedMessage, setEditedMessage] = useState(announcementMessage)
@@ -71,6 +77,13 @@ export default function AdminPage() {
     username: "",
     password: "",
     role: "worker" as "admin" | "worker",
+  })
+  const [isCameraDialogOpen, setIsCameraDialogOpen] = useState(false)
+  const [editingCamera, setEditingCamera] = useState<any>(null)
+  const [cameraForm, setCameraForm] = useState({
+    name: "",
+    location: "",
+    url: "",
   })
 
   useEffect(() => {
@@ -226,6 +239,56 @@ export default function AdminPage() {
     if (confirm("¿Estás seguro de eliminar este usuario?")) {
       deleteUser(userId)
     }
+  }
+
+  const handleOpenCameraDialog = (camera?: any) => {
+    if (camera) {
+      setEditingCamera(camera)
+      setCameraForm({
+        name: camera.name,
+        location: camera.location,
+        url: camera.url,
+      })
+    } else {
+      setEditingCamera(null)
+      setCameraForm({ name: "", location: "", url: "" })
+    }
+    setIsCameraDialogOpen(true)
+  }
+
+  const handleSaveCamera = () => {
+    if (!cameraForm.name || !cameraForm.location) {
+      alert("Por favor completa todos los campos requeridos")
+      return
+    }
+
+    const cameraData = {
+      id: editingCamera?.id || Date.now().toString(),
+      name: cameraForm.name,
+      location: cameraForm.location,
+      url: cameraForm.url || `https://example.com/camera/${Date.now()}`,
+      active: true,
+      createdAt: new Date(),
+    }
+
+    if (editingCamera) {
+      updateCamera(editingCamera.id, cameraData)
+    } else {
+      addCamera(cameraData)
+    }
+
+    setIsCameraDialogOpen(false)
+    setCameraForm({ name: "", location: "", url: "" })
+  }
+
+  const handleDeleteCamera = (id: string) => {
+    if (confirm("¿Estás seguro de eliminar esta cámara?")) {
+      deleteCamera(id)
+    }
+  }
+
+  const handleToggleCameraActive = (id: string, currentActive: boolean) => {
+    updateCamera(id, { active: !currentActive })
   }
 
   const totalRevenue = purchases.reduce((sum, purchase) => sum + purchase.amount, 0)
@@ -590,6 +653,133 @@ export default function AdminPage() {
                 </div>
               ))}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Camera Management Section */}
+        <Card className="mb-6">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Video className="h-5 w-5" />
+                  Sistema de Cámaras de Vigilancia
+                </CardTitle>
+                <CardDescription>Gestiona las cámaras de seguridad del parque</CardDescription>
+              </div>
+              <Dialog open={isCameraDialogOpen} onOpenChange={setIsCameraDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={() => handleOpenCameraDialog()}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nueva Cámara
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{editingCamera ? "Editar Cámara" : "Nueva Cámara"}</DialogTitle>
+                    <DialogDescription>
+                      {editingCamera ? "Modifica los detalles de la cámara" : "Agrega un nuevo punto de vigilancia"}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="camera-name">Nombre de la Cámara</Label>
+                      <Input
+                        id="camera-name"
+                        value={cameraForm.name}
+                        onChange={(e) => setCameraForm({ ...cameraForm, name: e.target.value })}
+                        placeholder="Cámara Entrada Principal"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="camera-location">Ubicación</Label>
+                      <Input
+                        id="camera-location"
+                        value={cameraForm.location}
+                        onChange={(e) => setCameraForm({ ...cameraForm, location: e.target.value })}
+                        placeholder="Entrada Principal"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="camera-url">URL del Stream (opcional)</Label>
+                      <Input
+                        id="camera-url"
+                        value={cameraForm.url}
+                        onChange={(e) => setCameraForm({ ...cameraForm, url: e.target.value })}
+                        placeholder="https://..."
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsCameraDialogOpen(false)}>
+                      Cancelar
+                    </Button>
+                    <Button onClick={handleSaveCamera}>Guardar</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {cameras.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Camera className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p>No hay cámaras configuradas</p>
+                <p className="text-sm">Agrega cámaras para monitorear el parque</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {cameras.map((camera) => (
+                  <Card key={camera.id}>
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <Camera className="h-4 w-4" />
+                            {camera.name}
+                          </CardTitle>
+                          <CardDescription className="text-sm">{camera.location}</CardDescription>
+                        </div>
+                        <Badge variant={camera.active ? "default" : "secondary"}>
+                          {camera.active ? "Activa" : "Inactiva"}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="aspect-video bg-muted rounded-md flex items-center justify-center">
+                        {camera.active ? (
+                          <div className="text-center">
+                            <Video className="h-8 w-8 mx-auto mb-2 text-primary" />
+                            <p className="text-xs text-muted-foreground">Stream activo</p>
+                          </div>
+                        ) : (
+                          <div className="text-center">
+                            <Video className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                            <p className="text-xs text-muted-foreground">Cámara desactivada</p>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 bg-transparent"
+                          onClick={() => handleToggleCameraActive(camera.id, camera.active)}
+                        >
+                          {camera.active ? "Desactivar" : "Activar"}
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => handleOpenCameraDialog(camera)}>
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={() => handleDeleteCamera(camera.id)}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 

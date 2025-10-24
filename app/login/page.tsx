@@ -25,11 +25,17 @@ export default function LoginPage() {
     e.preventDefault()
     setError("")
 
+    console.log("[v0] Login attempt:", { username, password })
+    console.log("[v0] Available users:", useStore.getState().getAllUsers())
+
     const success = login(username, password)
+    console.log("[v0] Login result:", success)
+
     if (success) {
+      console.log("[v0] Login successful, redirecting to:", redirect)
       router.push(redirect)
     } else {
-      setError("Credenciales incorrectas. Usuario: admin, Contraseña: admin")
+      setError("Credenciales incorrectas. Verifica tu usuario y contraseña.")
     }
   }
 
