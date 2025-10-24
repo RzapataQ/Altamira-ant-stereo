@@ -10,8 +10,23 @@ import Link from "next/link"
 import { generateTimeWarningMessage, generateTimeEndedMessage, sendWhatsAppMessage } from "@/lib/whatsapp"
 
 export default function TrackingPage() {
-  const { visitors, updateVisitor, pauseSession, startSession, endSession, addTime } = useStore()
+  const { visitors, updateVisitor, pauseSession, startSession, endSession, addTime, announcementMessage } = useStore()
   const [currentTime, setCurrentTime] = useState(new Date())
+
+  const playAnnouncement = (childName: string, guardianName: string) => {
+    const message = announcementMessage.replace("{{childName}}", childName).replace("{{guardianName}}", guardianName)
+
+    if ("speechSynthesis" in window) {
+      const utterance = new SpeechSynthesisUtterance(message)
+      utterance.lang = "es-ES"
+      utterance.rate = 0.9
+      utterance.pitch = 1
+      window.speechSynthesis.speak(utterance)
+      console.log("[v0] Playing audio announcement:", message)
+    } else {
+      console.log("[v0] Speech synthesis not supported")
+    }
+  }
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -27,9 +42,10 @@ export default function TrackingPage() {
           }
 
           if (remaining === 5 && !visitor.whatsappSent5min) {
-            console.log("[v0] Sending 5-minute warning WhatsApp")
+            console.log("[v0] Sending 5-minute warning WhatsApp and playing announcement")
             const message = generateTimeWarningMessage(visitor, 5)
             sendWhatsAppMessage(message)
+            playAnnouncement(visitor.child.name, visitor.guardian.name)
             updateVisitor(visitor.id, { whatsappSent5min: true, alertActive: true })
           }
 
@@ -44,7 +60,7 @@ export default function TrackingPage() {
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [visitors, updateVisitor, endSession])
+  }, [visitors, updateVisitor, endSession, announcementMessage])
 
   const activeVisitors = visitors.filter((v) => v.status === "active" || v.status === "paused")
 
@@ -88,7 +104,7 @@ export default function TrackingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/5 py-12 px-4">
       <div className="container mx-auto max-w-6xl">
         <Link href="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6">
           <ArrowLeft className="h-4 w-4 mr-2" />

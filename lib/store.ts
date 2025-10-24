@@ -36,6 +36,10 @@ interface StoreState {
   pauseSession: (visitorId: string) => void
   endSession: (visitorId: string) => void
   addTime: (visitorId: string, minutes: number) => void
+
+  // Admin settings
+  announcementMessage: string
+  setAnnouncementMessage: (message: string) => void
 }
 
 export const useStore = create<StoreState>((set, get) => ({
@@ -140,4 +144,10 @@ export const useStore = create<StoreState>((set, get) => ({
       })
     }
   },
+
+  // Admin settings
+  announcementMessage:
+    "{{childName}} y {{guardianName}}, les faltan 5 minutos. Si desea seguir con la diversión, acérquese al puesto de información o ingreso para recargar más tiempo en el parque.",
+
+  setAnnouncementMessage: (message) => set({ announcementMessage: message }),
 }))

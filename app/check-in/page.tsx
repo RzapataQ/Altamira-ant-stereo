@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,25 +8,30 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useStore } from "@/lib/store"
 import { parseQRData, isQRFromToday, formatQRDate } from "@/lib/qr-generator"
-import { ArrowLeft, CheckCircle2, XCircle, QrCode, AlertTriangle } from "lucide-react"
+import { ArrowLeft, CheckCircle2, XCircle, QrCode, AlertTriangle, Camera } from "lucide-react"
 import Link from "next/link"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import dynamic from "next/dynamic"
+
+const QRScanner = dynamic(() => import("@/components/qr-scanner").then((mod) => ({ default: mod.QRScanner })), {
+  ssr: false,
+})
 
 export default function CheckInPage() {
   const [qrInput, setQrInput] = useState("")
   const [scanning, setScanning] = useState(false)
+  const [showScanner, setShowScanner] = useState(false)
   const [result, setResult] = useState<{ success: boolean; message: string; visitor?: any; isOldQR?: boolean } | null>(
     null,
   )
   const { visitors, startSession } = useStore()
 
-  const handleScan = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleScan = (qrData: string) => {
     setScanning(true)
     setResult(null)
 
     setTimeout(() => {
-      const parsed = parseQRData(qrInput)
+      const parsed = parseQRData(qrData)
 
       if (!parsed) {
         setResult({
@@ -92,8 +96,19 @@ export default function CheckInPage() {
     }, 1000)
   }
 
+  const handleManualScan = (e: React.FormEvent) => {
+    e.preventDefault()
+    handleScan(qrInput)
+  }
+
+  const handleCameraScan = (data: string) => {
+    setShowScanner(false)
+    setQrInput(data)
+    handleScan(data)
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/5 py-12 px-4">
       <div className="container mx-auto max-w-2xl">
         <Link href="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6">
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -120,10 +135,30 @@ export default function CheckInPage() {
         <Card className="mb-6">
           <CardHeader>
             <CardTitle>Escanear Código QR</CardTitle>
-            <CardDescription>Ingresa el código QR del visitante para validar su entrada</CardDescription>
+            <CardDescription>Usa la cámara o ingresa el código manualmente</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleScan} className="space-y-4">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full mb-4 bg-transparent"
+              size="lg"
+              onClick={() => setShowScanner(true)}
+            >
+              <Camera className="h-5 w-5 mr-2" />
+              Escanear con Cámara
+            </Button>
+
+            <div className="relative mb-4">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">O ingresa manualmente</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleManualScan} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="qrCode">Código QR</Label>
                 <Input
@@ -230,13 +265,15 @@ export default function CheckInPage() {
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-muted-foreground">
             <p>1. Solicita al visitante que muestre su código QR</p>
-            <p>2. Escanea el código o ingrésalo manualmente</p>
+            <p>2. Usa la cámara para escanear o ingrésalo manualmente</p>
             <p>3. El sistema validará que el QR sea del día de hoy</p>
             <p>4. Verifica la información del visitante</p>
             <p>5. Permite el acceso si la validación es exitosa</p>
           </CardContent>
         </Card>
       </div>
+
+      {showScanner && <QRScanner onScan={handleCameraScan} onClose={() => setShowScanner(false)} />}
     </div>
   )
 }

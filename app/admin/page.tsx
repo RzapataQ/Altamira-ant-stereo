@@ -1,20 +1,28 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { useStore } from "@/lib/store"
 import { TIME_PACKAGES } from "@/lib/mock-data"
 import { Badge } from "@/components/ui/badge"
-import { DollarSign, Users, Clock, TrendingUp, ArrowLeft, Activity } from "lucide-react"
+import { DollarSign, Users, Clock, TrendingUp, ArrowLeft, Activity, Volume2, Save } from "lucide-react"
 import Link from "next/link"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function AdminPage() {
   const currentUser = useStore((state) => state.currentUser)
   const purchases = useStore((state) => state.purchases)
   const visitors = useStore((state) => state.visitors)
+  const announcementMessage = useStore((state) => state.announcementMessage)
+  const setAnnouncementMessage = useStore((state) => state.setAnnouncementMessage)
   const router = useRouter()
+
+  const [editedMessage, setEditedMessage] = useState(announcementMessage)
+  const [messageSaved, setMessageSaved] = useState(false)
 
   useEffect(() => {
     if (!currentUser || currentUser.role !== "admin") {
@@ -24,6 +32,26 @@ export default function AdminPage() {
 
   if (!currentUser || currentUser.role !== "admin") {
     return null
+  }
+
+  const handleSaveMessage = () => {
+    setAnnouncementMessage(editedMessage)
+    setMessageSaved(true)
+    setTimeout(() => setMessageSaved(false), 3000)
+  }
+
+  const handleTestAnnouncement = () => {
+    const testMessage = editedMessage.replace("{{childName}}", "Juan").replace("{{guardianName}}", "María")
+
+    if ("speechSynthesis" in window) {
+      const utterance = new SpeechSynthesisUtterance(testMessage)
+      utterance.lang = "es-ES"
+      utterance.rate = 0.9
+      utterance.pitch = 1
+      window.speechSynthesis.speak(utterance)
+    } else {
+      alert("Tu navegador no soporta síntesis de voz")
+    }
   }
 
   const totalRevenue = purchases.reduce((sum, purchase) => sum + purchase.amount, 0)
@@ -56,7 +84,7 @@ export default function AdminPage() {
   const totalPackagesSold = Object.values(packagesSold).reduce((sum, count) => sum + count, 0)
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/5 py-12 px-4">
       <div className="container mx-auto max-w-7xl">
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -73,6 +101,9 @@ export default function AdminPage() {
             <Link href="/check-in">
               <Button variant="outline">Check-In</Button>
             </Link>
+            <Link href="/settings">
+              <Button variant="outline">Configuración</Button>
+            </Link>
             <Link href="/">
               <Button variant="outline">
                 <ArrowLeft className="h-4 w-4 mr-2" />
@@ -81,6 +112,47 @@ export default function AdminPage() {
             </Link>
           </div>
         </div>
+
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Volume2 className="h-5 w-5" />
+              Mensaje de Anuncio por Parlantes
+            </CardTitle>
+            <CardDescription>
+              Personaliza el mensaje que se reproducirá cuando falten 5 minutos. Usa {"{"}
+              {"{"}childName{"}"} {"}"} y {"{"}
+              {"{"}guardianName{"}"} {"}"} para incluir los nombres.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="announcement">Mensaje de Anuncio</Label>
+              <Textarea
+                id="announcement"
+                value={editedMessage}
+                onChange={(e) => setEditedMessage(e.target.value)}
+                rows={4}
+                placeholder="Escribe el mensaje aquí..."
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={handleSaveMessage}>
+                <Save className="h-4 w-4 mr-2" />
+                Guardar Mensaje
+              </Button>
+              <Button variant="outline" onClick={handleTestAnnouncement}>
+                <Volume2 className="h-4 w-4 mr-2" />
+                Probar Anuncio
+              </Button>
+            </div>
+            {messageSaved && (
+              <Alert className="bg-green-50 border-green-200">
+                <AlertDescription className="text-green-900">Mensaje guardado exitosamente</AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card>
