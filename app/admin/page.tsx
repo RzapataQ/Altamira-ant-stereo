@@ -21,6 +21,7 @@ import {
   Plus,
   Edit,
   Trash2,
+  UserPlus,
 } from "lucide-react"
 import Link from "next/link"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -47,6 +48,10 @@ export default function AdminPage() {
   const addTimePackage = useStore((state) => state.addTimePackage)
   const updateTimePackage = useStore((state) => state.updateTimePackage)
   const deleteTimePackage = useStore((state) => state.deleteTimePackage)
+  const users = useStore((state) => state.getAllUsers())
+  const addUser = useStore((state) => state.addUser)
+  const updateUser = useStore((state) => state.updateUser)
+  const deleteUser = useStore((state) => state.deleteUser)
   const router = useRouter()
 
   const [editedMessage, setEditedMessage] = useState(announcementMessage)
@@ -59,6 +64,13 @@ export default function AdminPage() {
     minutes: "",
     price: "",
     description: "",
+  })
+  const [isWorkerDialogOpen, setIsWorkerDialogOpen] = useState(false)
+  const [editingWorker, setEditingWorker] = useState<any>(null)
+  const [workerForm, setWorkerForm] = useState({
+    username: "",
+    password: "",
+    role: "worker" as "admin" | "worker",
   })
 
   useEffect(() => {
@@ -151,6 +163,68 @@ export default function AdminPage() {
   const handleDeletePackage = (id: string) => {
     if (confirm("¿Estás seguro de eliminar este paquete?")) {
       deleteTimePackage(id)
+    }
+  }
+
+  const handleOpenWorkerDialog = (user?: any) => {
+    if (user) {
+      setEditingWorker(user)
+      setWorkerForm({
+        username: user.username,
+        password: "",
+        role: user.role,
+      })
+    } else {
+      setEditingWorker(null)
+      setWorkerForm({ username: "", password: "", role: "worker" })
+    }
+    setIsWorkerDialogOpen(true)
+  }
+
+  const handleSaveWorker = () => {
+    if (!workerForm.username || (!editingWorker && !workerForm.password)) {
+      alert("Por favor completa todos los campos requeridos")
+      return
+    }
+
+    if (editingWorker) {
+      // Editing existing user
+      const updates: any = {
+        username: workerForm.username,
+        role: workerForm.role,
+      }
+      if (workerForm.password) {
+        updates.password = workerForm.password
+      }
+      updateUser(editingWorker.id, updates)
+    } else {
+      // Creating new user
+      const newUser = {
+        id: Date.now().toString(),
+        username: workerForm.username,
+        password: workerForm.password,
+        role: workerForm.role,
+        createdAt: new Date(),
+        active: true,
+      }
+      addUser(newUser)
+    }
+
+    setIsWorkerDialogOpen(false)
+    setWorkerForm({ username: "", password: "", role: "worker" })
+  }
+
+  const handleToggleUserActive = (userId: string, currentActive: boolean) => {
+    updateUser(userId, { active: !currentActive })
+  }
+
+  const handleDeleteWorker = (userId: string) => {
+    if (userId === currentUser?.id) {
+      alert("No puedes eliminar tu propia cuenta")
+      return
+    }
+    if (confirm("¿Estás seguro de eliminar este usuario?")) {
+      deleteUser(userId)
     }
   }
 
@@ -396,6 +470,124 @@ export default function AdminPage() {
                     </div>
                   </CardContent>
                 </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="mb-6">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <UserPlus className="h-5 w-5" />
+                  Gestión de Trabajadores
+                </CardTitle>
+                <CardDescription>Administra los usuarios que pueden vender entradas</CardDescription>
+              </div>
+              <Dialog open={isWorkerDialogOpen} onOpenChange={setIsWorkerDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={() => handleOpenWorkerDialog()}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nuevo Trabajador
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{editingWorker ? "Editar Usuario" : "Nuevo Trabajador"}</DialogTitle>
+                    <DialogDescription>
+                      {editingWorker
+                        ? "Modifica los detalles del usuario"
+                        : "Crea un nuevo trabajador para vender entradas"}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="worker-username">Nombre de Usuario</Label>
+                      <Input
+                        id="worker-username"
+                        value={workerForm.username}
+                        onChange={(e) => setWorkerForm({ ...workerForm, username: e.target.value })}
+                        placeholder="trabajador1"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="worker-password">
+                        Contraseña {editingWorker && "(dejar vacío para no cambiar)"}
+                      </Label>
+                      <Input
+                        id="worker-password"
+                        type="password"
+                        value={workerForm.password}
+                        onChange={(e) => setWorkerForm({ ...workerForm, password: e.target.value })}
+                        placeholder="••••••••"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="worker-role">Rol</Label>
+                      <Select
+                        value={workerForm.role}
+                        onValueChange={(value: "admin" | "worker") => setWorkerForm({ ...workerForm, role: value })}
+                      >
+                        <SelectTrigger id="worker-role">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="worker">Trabajador</SelectItem>
+                          <SelectItem value="admin">Administrador</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsWorkerDialogOpen(false)}>
+                      Cancelar
+                    </Button>
+                    <Button onClick={handleSaveWorker}>Guardar</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {users.map((user) => (
+                <div
+                  key={user.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <p className="font-medium">{user.username}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {user.role === "admin" ? "Administrador" : "Trabajador"}
+                      </p>
+                    </div>
+                    <Badge variant={user.active ? "default" : "secondary"}>{user.active ? "Activo" : "Inactivo"}</Badge>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => handleOpenWorkerDialog(user)}>
+                      <Edit className="h-3 w-3 mr-1" />
+                      Editar
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleToggleUserActive(user.id, user.active)}
+                      disabled={user.id === currentUser?.id}
+                    >
+                      {user.active ? "Desactivar" : "Activar"}
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDeleteWorker(user.id)}
+                      disabled={user.id === currentUser?.id}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
               ))}
             </div>
           </CardContent>

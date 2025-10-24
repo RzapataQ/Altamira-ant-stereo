@@ -50,75 +50,8 @@ export const MOCK_USERS: User[] = [
     lastLogin: new Date(),
     active: true,
   },
-  {
-    id: "2",
-    username: "trabajador1",
-    password: "trabajador123",
-    role: "worker",
-    createdAt: new Date("2024-02-01"),
-    lastLogin: new Date(),
-    active: true,
-  },
 ]
 
-export const MOCK_VISITORS: Visitor[] = [
-  {
-    id: "1",
-    child: {
-      name: "Sofía Martínez",
-      age: 6,
-    },
-    guardian: {
-      name: "Ana Martínez",
-      phone: "+573001234567",
-      relationship: "Madre",
-    },
-    timePackage: "2hours",
-    totalMinutes: 120,
-    remainingMinutes: 45,
-    initialMinutes: 120,
-    registrationDate: new Date(),
-    sessionStarted: new Date(Date.now() - 75 * 60 * 1000),
-    status: "active",
-    qrData: "PARKETR3S-001-20250110",
-    whatsappSent5min: false,
-    speakerActivated5min: false,
-    recharges: 0,
-    alertActive: false,
-  },
-  {
-    id: "2",
-    child: {
-      name: "Lucas Rodríguez",
-      age: 4,
-      allergies: "Ninguna",
-    },
-    guardian: {
-      name: "Carlos Rodríguez",
-      phone: "+573009876543",
-      relationship: "Padre",
-    },
-    timePackage: "1hour",
-    totalMinutes: 60,
-    remainingMinutes: 60,
-    initialMinutes: 60,
-    registrationDate: new Date(),
-    status: "registered",
-    qrData: "PARKETR3S-002-20250110",
-    whatsappSent5min: false,
-    speakerActivated5min: false,
-    recharges: 0,
-    alertActive: false,
-  },
-]
+export const MOCK_VISITORS: Visitor[] = []
 
-export const MOCK_PURCHASES: Purchase[] = [
-  {
-    id: "1",
-    visitor: MOCK_VISITORS[0],
-    amount: 25000,
-    paymentMethod: "Tarjeta de crédito",
-    createdAt: new Date(),
-    status: "completed",
-  },
-]
+export const MOCK_PURCHASES: Purchase[] = []

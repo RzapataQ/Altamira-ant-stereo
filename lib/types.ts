@@ -38,6 +38,7 @@ export interface Visitor {
   status: VisitorStatus
   qrData: string
   paymentMethod: string // Added payment method to track how the visitor paid
+  soldBy: string // Username of the worker/admin who sold the ticket
   whatsappSent5min: boolean
   speakerActivated5min: boolean
   recharges: number

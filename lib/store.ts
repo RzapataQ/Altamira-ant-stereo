@@ -50,6 +50,13 @@ interface StoreState {
   addTimePackage: (pkg: TimePackage) => void
   updateTimePackage: (id: string, updates: Partial<TimePackage>) => void
   deleteTimePackage: (id: string) => void
+
+  // User management functions
+  users: User[]
+  addUser: (user: User) => void
+  updateUser: (id: string, updates: Partial<User>) => void
+  deleteUser: (id: string) => void
+  getAllUsers: () => User[]
 }
 
 export const useStore = create<StoreState>((set, get) => ({
@@ -72,7 +79,7 @@ export const useStore = create<StoreState>((set, get) => ({
   currentUser: null,
 
   login: (username, password) => {
-    const user = MOCK_USERS.find((u) => u.username === username && u.password === password)
+    const user = get().users.find((u) => u.username === username && u.password === password && u.active)
     if (user) {
       set({ currentUser: user })
       return true
@@ -83,9 +90,9 @@ export const useStore = create<StoreState>((set, get) => ({
   logout: () => set({ currentUser: null }),
 
   changePassword: (userId, newPassword) => {
-    const userIndex = MOCK_USERS.findIndex((u) => u.id === userId)
-    if (userIndex !== -1) {
-      MOCK_USERS[userIndex].password = newPassword
+    const user = get().users.find((u) => u.id === userId)
+    if (user) {
+      get().updateUser(userId, { password: newPassword })
       const currentUser = get().currentUser
       if (currentUser && currentUser.id === userId) {
         set({ currentUser: { ...currentUser, password: newPassword } })
@@ -190,5 +197,28 @@ export const useStore = create<StoreState>((set, get) => ({
     set({
       timePackages: get().timePackages.filter((p) => p.id !== id),
     })
+  },
+
+  // User management functions
+  users: MOCK_USERS,
+
+  addUser: (user) => {
+    set({ users: [...get().users, user] })
+  },
+
+  updateUser: (id, updates) => {
+    set({
+      users: get().users.map((u) => (u.id === id ? { ...u, ...updates } : u)),
+    })
+  },
+
+  deleteUser: (id) => {
+    set({
+      users: get().users.filter((u) => u.id !== id),
+    })
+  },
+
+  getAllUsers: () => {
+    return get().users
   },
 }))

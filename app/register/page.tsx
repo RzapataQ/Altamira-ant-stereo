@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -18,8 +17,8 @@ import type { Child, Guardian } from "@/lib/types"
 
 export default function RegisterPage() {
   const router = useRouter()
+  const { selectedTimePackage, setChildInfo, setGuardianInfo, setTimePackage, currentUser } = useStore()
   const [step, setStep] = useState(1)
-  const { selectedTimePackage, setChildInfo, setGuardianInfo, setTimePackage } = useStore()
 
   // Child form state
   const [childName, setChildName] = useState("")
@@ -35,6 +34,16 @@ export default function RegisterPage() {
 
   // Time package state
   const [selectedPackage, setSelectedPackage] = useState(selectedTimePackage || "1hour")
+
+  useEffect(() => {
+    if (!currentUser || (currentUser.role !== "admin" && currentUser.role !== "worker")) {
+      router.push("/login?redirect=/register")
+    }
+  }, [currentUser, router])
+
+  if (!currentUser || (currentUser.role !== "admin" && currentUser.role !== "worker")) {
+    return null
+  }
 
   const handleChildSubmit = (e: React.FormEvent) => {
     e.preventDefault()

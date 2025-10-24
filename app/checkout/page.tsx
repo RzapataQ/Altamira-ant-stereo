@@ -11,13 +11,22 @@ import { useEffect } from "react"
 
 export default function CheckoutPage() {
   const router = useRouter()
-  const { currentChild, currentGuardian, selectedTimePackage } = useStore()
+  const { currentChild, currentGuardian, selectedTimePackage, currentUser } = useStore()
 
   useEffect(() => {
+    if (!currentUser || (currentUser.role !== "admin" && currentUser.role !== "worker")) {
+      router.push("/login?redirect=/checkout")
+      return
+    }
+
     if (!currentChild || !currentGuardian || !selectedTimePackage) {
       router.push("/register")
     }
-  }, [currentChild, currentGuardian, selectedTimePackage, router])
+  }, [currentChild, currentGuardian, selectedTimePackage, currentUser, router])
+
+  if (!currentUser || (currentUser.role !== "admin" && currentUser.role !== "worker")) {
+    return null
+  }
 
   if (!currentChild || !currentGuardian || !selectedTimePackage) {
     return null

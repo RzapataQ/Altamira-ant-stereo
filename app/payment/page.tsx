@@ -25,15 +25,26 @@ export default function PaymentPage() {
   const [cvv, setCvv] = useState("")
   const [processing, setProcessing] = useState(false)
 
-  const { currentChild, currentGuardian, selectedTimePackage, addVisitor, addPurchase, clearRegistration } = useStore()
+  const {
+    currentChild,
+    currentGuardian,
+    selectedTimePackage,
+    currentUser,
+    addVisitor,
+    addPurchase,
+    clearRegistration,
+  } = useStore()
 
   useEffect(() => {
     if (!currentChild || !currentGuardian || !selectedTimePackage) {
       router.push("/register")
     }
-  }, [currentChild, currentGuardian, selectedTimePackage, router])
+    if (!currentUser) {
+      router.push("/login")
+    }
+  }, [currentChild, currentGuardian, selectedTimePackage, currentUser, router])
 
-  if (!currentChild || !currentGuardian || !selectedTimePackage) {
+  if (!currentChild || !currentGuardian || !selectedTimePackage || !currentUser) {
     return null
   }
 
@@ -73,6 +84,7 @@ export default function PaymentPage() {
       registrationDate: new Date(),
       status: "registered",
       paymentMethod: paymentMethodText,
+      soldBy: currentUser.username, // Track who sold this ticket
       qrData: "", // Will be generated after visitor is created
       whatsappSent5min: false,
       speakerActivated5min: false,

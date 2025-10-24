@@ -5,9 +5,24 @@ import { TimePackageCard } from "@/components/time-package-card"
 import { TIME_PACKAGES } from "@/lib/mock-data"
 import { useRouter } from "next/navigation"
 import { Sparkles, Clock, Shield, Heart } from "lucide-react"
+import { useStore } from "@/lib/store"
 
 export default function Home() {
   const router = useRouter()
+  const currentUser = useStore((state) => state.currentUser)
+
+  const handleBuyClick = () => {
+    if (!currentUser) {
+      // Not logged in, redirect to login
+      router.push("/login")
+    } else if (currentUser.role === "admin" || currentUser.role === "worker") {
+      // Authorized user, go to register
+      router.push("/register")
+    } else {
+      // Customer role, show alert
+      alert("Solo trabajadores y administradores pueden vender entradas")
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted">
@@ -26,25 +41,14 @@ export default function Home() {
               Diversión Sin Límites Para Tus Pequeños
             </h1>
             <p className="text-xl text-white/90 mb-8 leading-relaxed drop-shadow">
-              El parque infantil más divertido y seguro de la ciudad. Compra tu entrada online y disfruta de una
-              experiencia inolvidable con códigos QR para acceso rápido.
+              El parque infantil más divertido y seguro de la ciudad. Sistema de acceso con códigos QR y notificaciones
+              de WhatsApp para mayor tranquilidad.
             </p>
-            <div className="flex flex-wrap gap-4 justify-center">
-              <Button
-                size="lg"
-                onClick={() => router.push("/register")}
-                className="text-lg px-8 bg-white text-[#9c4eb3] hover:bg-white/90"
-              >
-                Comprar Entrada
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={() => router.push("/login")}
-                className="text-lg px-8 border-white text-white hover:bg-white/10"
-              >
-                Iniciar Sesión
-              </Button>
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 max-w-2xl mx-auto">
+              <p className="text-white text-lg mb-2">
+                Para comprar entradas, por favor inicia sesión como trabajador o administrador
+              </p>
+              <p className="text-white/80 text-sm">Usa el botón "Iniciar Sesión" en el menú superior</p>
             </div>
           </div>
         </div>
@@ -116,14 +120,20 @@ export default function Home() {
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-4xl font-bold mb-6 text-white drop-shadow-lg">¿Listo Para La Diversión?</h2>
           <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto drop-shadow">
-            Compra tu entrada ahora y recibe tu código QR al instante. Acceso rápido y seguro garantizado.
+            {currentUser
+              ? currentUser.role === "admin" || currentUser.role === "worker"
+                ? "Registra un nuevo visitante y genera su código QR de acceso al instante."
+                : "Solo trabajadores y administradores pueden vender entradas. Por favor contacta al personal del parque."
+              : "Para comprar entradas, inicia sesión como trabajador o administrador usando el botón en el menú superior."}
           </p>
           <Button
             size="lg"
-            onClick={() => router.push("/register")}
+            onClick={handleBuyClick}
             className="text-lg px-12 bg-white text-[#9c4eb3] hover:bg-white/90"
           >
-            Comprar Ahora
+            {currentUser && (currentUser.role === "admin" || currentUser.role === "worker")
+              ? "Registrar Visitante"
+              : "Iniciar Sesión"}
           </Button>
         </div>
       </section>
@@ -147,9 +157,6 @@ export default function Home() {
               </Button>
               <Button variant="ghost" onClick={() => router.push("/admin")}>
                 Admin
-              </Button>
-              <Button variant="ghost" onClick={() => router.push("/errors")}>
-                Sistema de Errores
               </Button>
             </div>
           </div>
