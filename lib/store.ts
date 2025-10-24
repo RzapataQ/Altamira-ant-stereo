@@ -40,6 +40,16 @@ interface StoreState {
   // Admin settings
   announcementMessage: string
   setAnnouncementMessage: (message: string) => void
+  voiceSettings: {
+    voiceName: string
+    rate: number
+    pitch: number
+  }
+  setVoiceSettings: (settings: { voiceName: string; rate: number; pitch: number }) => void
+  timePackages: TimePackage[]
+  addTimePackage: (pkg: TimePackage) => void
+  updateTimePackage: (id: string, updates: Partial<TimePackage>) => void
+  deleteTimePackage: (id: string) => void
 }
 
 export const useStore = create<StoreState>((set, get) => ({
@@ -150,4 +160,35 @@ export const useStore = create<StoreState>((set, get) => ({
     "{{childName}} y {{guardianName}}, les faltan 5 minutos. Si desea seguir con la diversión, acérquese al puesto de información o ingreso para recargar más tiempo en el parque.",
 
   setAnnouncementMessage: (message) => set({ announcementMessage: message }),
+
+  voiceSettings: {
+    voiceName: "es-ES-Standard-A", // Default Spanish voice
+    rate: 0.9,
+    pitch: 1.0,
+  },
+
+  setVoiceSettings: (settings) => set({ voiceSettings: settings }),
+
+  timePackages: [
+    { id: "1", name: "30 Minutos", minutes: 30, price: 15000, description: "Ideal para una visita rápida" },
+    { id: "2", name: "1 Hora", minutes: 60, price: 25000, description: "Tiempo perfecto para disfrutar" },
+    { id: "3", name: "2 Horas", minutes: 120, price: 40000, description: "Diversión extendida" },
+    { id: "4", name: "3 Horas", minutes: 180, price: 55000, description: "Máxima diversión" },
+  ],
+
+  addTimePackage: (pkg) => {
+    set({ timePackages: [...get().timePackages, pkg] })
+  },
+
+  updateTimePackage: (id, updates) => {
+    set({
+      timePackages: get().timePackages.map((p) => (p.id === id ? { ...p, ...updates } : p)),
+    })
+  },
+
+  deleteTimePackage: (id) => {
+    set({
+      timePackages: get().timePackages.filter((p) => p.id !== id),
+    })
+  },
 }))

@@ -10,7 +10,16 @@ import Link from "next/link"
 import { generateTimeWarningMessage, generateTimeEndedMessage, sendWhatsAppMessage } from "@/lib/whatsapp"
 
 export default function TrackingPage() {
-  const { visitors, updateVisitor, pauseSession, startSession, endSession, addTime, announcementMessage } = useStore()
+  const {
+    visitors,
+    updateVisitor,
+    pauseSession,
+    startSession,
+    endSession,
+    addTime,
+    announcementMessage,
+    voiceSettings,
+  } = useStore()
   const [currentTime, setCurrentTime] = useState(new Date())
 
   const playAnnouncement = (childName: string, guardianName: string) => {
@@ -19,8 +28,16 @@ export default function TrackingPage() {
     if ("speechSynthesis" in window) {
       const utterance = new SpeechSynthesisUtterance(message)
       utterance.lang = "es-ES"
-      utterance.rate = 0.9
-      utterance.pitch = 1
+      utterance.rate = voiceSettings.rate
+      utterance.pitch = voiceSettings.pitch
+
+      // Try to use the selected voice
+      const voices = window.speechSynthesis.getVoices()
+      const selectedVoice = voices.find((v) => v.name === voiceSettings.voiceName || v.lang.startsWith("es"))
+      if (selectedVoice) {
+        utterance.voice = selectedVoice
+      }
+
       window.speechSynthesis.speak(utterance)
       console.log("[v0] Playing audio announcement:", message)
     } else {

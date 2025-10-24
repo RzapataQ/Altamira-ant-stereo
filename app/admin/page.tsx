@@ -6,12 +6,34 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Input } from "@/components/ui/input"
 import { useStore } from "@/lib/store"
-import { TIME_PACKAGES } from "@/lib/mock-data"
 import { Badge } from "@/components/ui/badge"
-import { DollarSign, Users, Clock, TrendingUp, ArrowLeft, Activity, Volume2, Save } from "lucide-react"
+import {
+  DollarSign,
+  Users,
+  Clock,
+  TrendingUp,
+  ArrowLeft,
+  Activity,
+  Volume2,
+  Save,
+  Plus,
+  Edit,
+  Trash2,
+} from "lucide-react"
 import Link from "next/link"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 
 export default function AdminPage() {
   const currentUser = useStore((state) => state.currentUser)
@@ -19,16 +41,42 @@ export default function AdminPage() {
   const visitors = useStore((state) => state.visitors)
   const announcementMessage = useStore((state) => state.announcementMessage)
   const setAnnouncementMessage = useStore((state) => state.setAnnouncementMessage)
+  const voiceSettings = useStore((state) => state.voiceSettings)
+  const setVoiceSettings = useStore((state) => state.setVoiceSettings)
+  const timePackages = useStore((state) => state.timePackages)
+  const addTimePackage = useStore((state) => state.addTimePackage)
+  const updateTimePackage = useStore((state) => state.updateTimePackage)
+  const deleteTimePackage = useStore((state) => state.deleteTimePackage)
   const router = useRouter()
 
   const [editedMessage, setEditedMessage] = useState(announcementMessage)
   const [messageSaved, setMessageSaved] = useState(false)
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
+  const [isPackageDialogOpen, setIsPackageDialogOpen] = useState(false)
+  const [editingPackage, setEditingPackage] = useState<any>(null)
+  const [packageForm, setPackageForm] = useState({
+    name: "",
+    minutes: "",
+    price: "",
+    description: "",
+  })
 
   useEffect(() => {
     if (!currentUser || currentUser.role !== "admin") {
       router.push("/login?redirect=/admin")
     }
   }, [currentUser, router])
+
+  useEffect(() => {
+    // Load available voices
+    const loadVoices = () => {
+      const availableVoices = window.speechSynthesis.getVoices()
+      setVoices(availableVoices.filter((v) => v.lang.startsWith("es")))
+    }
+
+    loadVoices()
+    window.speechSynthesis.onvoiceschanged = loadVoices
+  }, [])
 
   if (!currentUser || currentUser.role !== "admin") {
     return null
@@ -46,11 +94,63 @@ export default function AdminPage() {
     if ("speechSynthesis" in window) {
       const utterance = new SpeechSynthesisUtterance(testMessage)
       utterance.lang = "es-ES"
-      utterance.rate = 0.9
-      utterance.pitch = 1
+      utterance.rate = voiceSettings.rate
+      utterance.pitch = voiceSettings.pitch
+
+      const selectedVoice = voices.find((v) => v.name === voiceSettings.voiceName)
+      if (selectedVoice) {
+        utterance.voice = selectedVoice
+      }
+
       window.speechSynthesis.speak(utterance)
     } else {
       alert("Tu navegador no soporta síntesis de voz")
+    }
+  }
+
+  const handleOpenPackageDialog = (pkg?: any) => {
+    if (pkg) {
+      setEditingPackage(pkg)
+      setPackageForm({
+        name: pkg.name,
+        minutes: pkg.minutes.toString(),
+        price: pkg.price.toString(),
+        description: pkg.description,
+      })
+    } else {
+      setEditingPackage(null)
+      setPackageForm({ name: "", minutes: "", price: "", description: "" })
+    }
+    setIsPackageDialogOpen(true)
+  }
+
+  const handleSavePackage = () => {
+    if (!packageForm.name || !packageForm.minutes || !packageForm.price) {
+      alert("Por favor completa todos los campos requeridos")
+      return
+    }
+
+    const packageData = {
+      id: editingPackage?.id || Date.now().toString(),
+      name: packageForm.name,
+      minutes: Number.parseInt(packageForm.minutes),
+      price: Number.parseInt(packageForm.price),
+      description: packageForm.description,
+    }
+
+    if (editingPackage) {
+      updateTimePackage(editingPackage.id, packageData)
+    } else {
+      addTimePackage(packageData)
+    }
+
+    setIsPackageDialogOpen(false)
+    setPackageForm({ name: "", minutes: "", price: "", description: "" })
+  }
+
+  const handleDeletePackage = (id: string) => {
+    if (confirm("¿Estás seguro de eliminar este paquete?")) {
+      deleteTimePackage(id)
     }
   }
 
@@ -61,7 +161,7 @@ export default function AdminPage() {
 
   const packagesSold = purchases.reduce(
     (acc, purchase) => {
-      const pkg = TIME_PACKAGES.find((p) => p.id === purchase.visitor.timePackage)
+      const pkg = timePackages.find((p) => p.id === purchase.visitor.timePackage)
       if (pkg) {
         if (!acc[pkg.name]) {
           acc[pkg.name] = 0
@@ -117,15 +217,57 @@ export default function AdminPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Volume2 className="h-5 w-5" />
-              Mensaje de Anuncio por Parlantes
+              Configuración de Anuncios por Parlantes
             </CardTitle>
             <CardDescription>
-              Personaliza el mensaje que se reproducirá cuando falten 5 minutos. Usa {"{"}
-              {"{"}childName{"}"} {"}"} y {"{"}
-              {"{"}guardianName{"}"} {"}"} para incluir los nombres.
+              Personaliza el mensaje y la voz que se reproducirá cuando falten 5 minutos
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="voice">Tipo de Voz</Label>
+                <Select
+                  value={voiceSettings.voiceName}
+                  onValueChange={(value) => setVoiceSettings({ ...voiceSettings, voiceName: value })}
+                >
+                  <SelectTrigger id="voice">
+                    <SelectValue placeholder="Selecciona una voz" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {voices.map((voice) => (
+                      <SelectItem key={voice.name} value={voice.name}>
+                        {voice.name} ({voice.lang})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="rate">Velocidad: {voiceSettings.rate.toFixed(1)}</Label>
+                <Input
+                  id="rate"
+                  type="range"
+                  min="0.5"
+                  max="2"
+                  step="0.1"
+                  value={voiceSettings.rate}
+                  onChange={(e) => setVoiceSettings({ ...voiceSettings, rate: Number.parseFloat(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pitch">Tono: {voiceSettings.pitch.toFixed(1)}</Label>
+                <Input
+                  id="pitch"
+                  type="range"
+                  min="0.5"
+                  max="2"
+                  step="0.1"
+                  value={voiceSettings.pitch}
+                  onChange={(e) => setVoiceSettings({ ...voiceSettings, pitch: Number.parseFloat(e.target.value) })}
+                />
+              </div>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="announcement">Mensaje de Anuncio</Label>
               <Textarea
@@ -133,7 +275,7 @@ export default function AdminPage() {
                 value={editedMessage}
                 onChange={(e) => setEditedMessage(e.target.value)}
                 rows={4}
-                placeholder="Escribe el mensaje aquí..."
+                placeholder="Usa {{childName}} y {{guardianName}} para los nombres"
               />
             </div>
             <div className="flex gap-2">
@@ -148,9 +290,114 @@ export default function AdminPage() {
             </div>
             {messageSaved && (
               <Alert className="bg-green-50 border-green-200">
-                <AlertDescription className="text-green-900">Mensaje guardado exitosamente</AlertDescription>
+                <AlertDescription className="text-green-900">Configuración guardada exitosamente</AlertDescription>
               </Alert>
             )}
+          </CardContent>
+        </Card>
+
+        <Card className="mb-6">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Paquetes de Tiempo</CardTitle>
+                <CardDescription>Gestiona los paquetes disponibles para los visitantes</CardDescription>
+              </div>
+              <Dialog open={isPackageDialogOpen} onOpenChange={setIsPackageDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={() => handleOpenPackageDialog()}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nuevo Paquete
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{editingPackage ? "Editar Paquete" : "Nuevo Paquete"}</DialogTitle>
+                    <DialogDescription>
+                      {editingPackage ? "Modifica los detalles del paquete" : "Crea un nuevo paquete de tiempo"}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="pkg-name">Nombre del Paquete</Label>
+                      <Input
+                        id="pkg-name"
+                        value={packageForm.name}
+                        onChange={(e) => setPackageForm({ ...packageForm, name: e.target.value })}
+                        placeholder="Ej: 1 Hora"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="pkg-minutes">Minutos</Label>
+                      <Input
+                        id="pkg-minutes"
+                        type="number"
+                        value={packageForm.minutes}
+                        onChange={(e) => setPackageForm({ ...packageForm, minutes: e.target.value })}
+                        placeholder="60"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="pkg-price">Precio (COP)</Label>
+                      <Input
+                        id="pkg-price"
+                        type="number"
+                        value={packageForm.price}
+                        onChange={(e) => setPackageForm({ ...packageForm, price: e.target.value })}
+                        placeholder="25000"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="pkg-description">Descripción</Label>
+                      <Textarea
+                        id="pkg-description"
+                        value={packageForm.description}
+                        onChange={(e) => setPackageForm({ ...packageForm, description: e.target.value })}
+                        placeholder="Descripción del paquete"
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsPackageDialogOpen(false)}>
+                      Cancelar
+                    </Button>
+                    <Button onClick={handleSavePackage}>Guardar</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {timePackages.map((pkg) => (
+                <Card key={pkg.id}>
+                  <CardHeader>
+                    <CardTitle className="text-lg">{pkg.name}</CardTitle>
+                    <CardDescription>{pkg.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <p className="text-2xl font-bold text-primary">{formatPrice(pkg.price)}</p>
+                      <p className="text-sm text-muted-foreground">{pkg.minutes} minutos</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 bg-transparent"
+                        onClick={() => handleOpenPackageDialog(pkg)}
+                      >
+                        <Edit className="h-3 w-3 mr-1" />
+                        Editar
+                      </Button>
+                      <Button variant="destructive" size="sm" onClick={() => handleDeletePackage(pkg.id)}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
@@ -308,7 +555,7 @@ export default function AdminPage() {
                         <td className="py-3 px-4 text-sm font-medium">{purchase.visitor.child.name}</td>
                         <td className="py-3 px-4 text-sm">{purchase.visitor.guardian.name}</td>
                         <td className="py-3 px-4 text-sm">
-                          {TIME_PACKAGES.find((p) => p.id === purchase.visitor.timePackage)?.name}
+                          {timePackages.find((p) => p.id === purchase.visitor.timePackage)?.name}
                         </td>
                         <td className="py-3 px-4 font-medium">{formatPrice(purchase.amount)}</td>
                         <td className="py-3 px-4">
