@@ -38,6 +38,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { generatePDFReport, generateExcelReport } from "@/lib/pdf-export"
 
 export default function AdminPage() {
   const currentUser = useStore((state) => state.currentUser)
@@ -342,6 +343,22 @@ export default function AdminPage() {
     document.body.removeChild(link)
   }
 
+  const handleExportPDF = () => {
+    generatePDFReport({
+      visitors,
+      purchases,
+      timePackages,
+    })
+  }
+
+  const handleExportExcel = () => {
+    generateExcelReport({
+      visitors,
+      purchases,
+      timePackages,
+    })
+  }
+
   const totalRevenue = purchases.reduce((sum, purchase) => sum + purchase.amount, 0)
   const totalVisitors = visitors.length
   const activeVisitors = visitors.filter((v) => v.status === "active").length
@@ -372,38 +389,38 @@ export default function AdminPage() {
   const totalPackagesSold = Object.values(packagesSold).reduce((sum, count) => sum + count, 0)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/5 py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10 py-12 px-4">
       <div className="container mx-auto max-w-7xl">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+            <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
               Panel de Administración
             </h1>
-            <p className="text-muted-foreground">Gestiona las ventas y visitantes de Parke tr3s</p>
+            <p className="text-muted-foreground text-lg">Gestiona todo el sistema de Parke tr3s</p>
           </div>
           <div className="flex gap-3">
-            <Button onClick={handleExportReports} variant="outline" className="bg-white">
+            <Button
+              onClick={handleExportPDF}
+              className="bg-gradient-to-r from-red-500 to-red-600 hover:opacity-90 text-white"
+            >
               <Download className="h-4 w-4 mr-2" />
-              Descargar Reportes
+              Exportar PDF
+            </Button>
+            <Button
+              onClick={handleExportExcel}
+              className="bg-gradient-to-r from-green-500 to-green-600 hover:opacity-90 text-white"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Exportar Excel
             </Button>
             <Link href="/tracking">
-              <Button variant="outline" className="bg-white">
+              <Button variant="outline" className="bg-white border-2 border-primary/20 hover:border-primary">
                 <Activity className="h-4 w-4 mr-2" />
                 Control de Tiempo
               </Button>
             </Link>
-            <Link href="/check-in">
-              <Button variant="outline" className="bg-white">
-                Check-In
-              </Button>
-            </Link>
-            <Link href="/settings">
-              <Button variant="outline" className="bg-white">
-                Configuración
-              </Button>
-            </Link>
             <Link href="/">
-              <Button variant="outline" className="bg-white">
+              <Button variant="outline" className="bg-white border-2 border-primary/20 hover:border-primary">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Inicio
               </Button>
