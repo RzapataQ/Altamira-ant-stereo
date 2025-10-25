@@ -12,7 +12,6 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useStore } from "@/lib/store"
 import { CreditCard, Wallet, ArrowLeft } from "lucide-react"
 import Link from "next/link"
-import { TIME_PACKAGES } from "@/lib/mock-data"
 import { generateQRData } from "@/lib/qr-generator"
 import type { Visitor } from "@/lib/types"
 
@@ -30,6 +29,7 @@ export default function PaymentPage() {
     currentGuardian,
     selectedTimePackage,
     currentUser,
+    timePackages,
     addVisitor,
     addPurchase,
     clearRegistration,
@@ -48,7 +48,7 @@ export default function PaymentPage() {
     return null
   }
 
-  const selectedPackage = TIME_PACKAGES.find((pkg) => pkg.id === selectedTimePackage)
+  const selectedPackage = timePackages.find((pkg) => pkg.id === selectedTimePackage)
 
   if (!selectedPackage) {
     return null
@@ -84,8 +84,8 @@ export default function PaymentPage() {
       registrationDate: new Date(),
       status: "registered",
       paymentMethod: paymentMethodText,
-      soldBy: currentUser.username, // Track who sold this ticket
-      qrData: "", // Will be generated after visitor is created
+      soldBy: currentUser.username,
+      qrData: "",
       whatsappSent5min: false,
       speakerActivated5min: false,
       recharges: 0,
@@ -118,37 +118,39 @@ export default function PaymentPage() {
   const total = subtotal + vat
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10 py-12 px-4">
       <div className="container mx-auto max-w-2xl">
         <Link
           href="/checkout"
-          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-primary mb-6"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Volver al resumen
         </Link>
 
-        <h1 className="text-3xl font-bold mb-8">Método de Pago</h1>
+        <h1 className="text-3xl font-bold mb-8 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+          Método de Pago
+        </h1>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <Card>
+          <Card className="border-primary/20">
             <CardHeader>
               <CardTitle>Selecciona tu método de pago</CardTitle>
               <CardDescription>Todos los pagos son seguros y encriptados</CardDescription>
             </CardHeader>
             <CardContent>
               <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-4">
-                <div className="flex items-center space-x-3 border rounded-lg p-4 cursor-pointer hover:bg-muted">
+                <div className="flex items-center space-x-3 border-2 border-primary/20 rounded-lg p-4 cursor-pointer hover:bg-primary/5 hover:border-primary/40 transition-all">
                   <RadioGroupItem value="credit-card" id="credit-card" />
                   <Label htmlFor="credit-card" className="flex items-center gap-2 cursor-pointer flex-1">
-                    <CreditCard className="h-5 w-5" />
+                    <CreditCard className="h-5 w-5 text-primary" />
                     <span className="font-medium">Tarjeta de Crédito/Débito</span>
                   </Label>
                 </div>
-                <div className="flex items-center space-x-3 border rounded-lg p-4 cursor-pointer hover:bg-muted">
+                <div className="flex items-center space-x-3 border-2 border-secondary/20 rounded-lg p-4 cursor-pointer hover:bg-secondary/5 hover:border-secondary/40 transition-all">
                   <RadioGroupItem value="paypal" id="paypal" />
                   <Label htmlFor="paypal" className="flex items-center gap-2 cursor-pointer flex-1">
-                    <Wallet className="h-5 w-5" />
+                    <Wallet className="h-5 w-5 text-secondary" />
                     <span className="font-medium">Efectivo / Nequi / Daviplata</span>
                   </Label>
                 </div>
@@ -157,7 +159,7 @@ export default function PaymentPage() {
           </Card>
 
           {paymentMethod === "credit-card" && (
-            <Card>
+            <Card className="border-primary/20">
               <CardHeader>
                 <CardTitle>Información de la Tarjeta</CardTitle>
               </CardHeader>
@@ -207,7 +209,7 @@ export default function PaymentPage() {
                     />
                   </div>
                 </div>
-                <div className="bg-muted p-3 rounded-md text-sm text-muted-foreground">
+                <div className="bg-primary/10 border border-primary/20 p-3 rounded-md text-sm text-muted-foreground">
                   Esta es una demo. Puedes usar cualquier número de tarjeta para probar.
                 </div>
               </CardContent>
@@ -215,10 +217,10 @@ export default function PaymentPage() {
           )}
 
           {paymentMethod === "paypal" && (
-            <Card>
+            <Card className="border-secondary/20">
               <CardContent className="pt-6">
-                <div className="bg-muted p-6 rounded-md text-center space-y-3">
-                  <Wallet className="h-12 w-12 mx-auto text-muted-foreground" />
+                <div className="bg-secondary/10 border border-secondary/20 p-6 rounded-md text-center space-y-3">
+                  <Wallet className="h-12 w-12 mx-auto text-secondary" />
                   <p className="text-sm text-muted-foreground">
                     Puedes pagar en efectivo en recepción o mediante transferencia a Nequi/Daviplata.
                   </p>
@@ -227,7 +229,7 @@ export default function PaymentPage() {
             </Card>
           )}
 
-          <Card>
+          <Card className="border-accent/20 bg-accent/5">
             <CardHeader>
               <CardTitle>Resumen del Pedido</CardTitle>
             </CardHeader>
@@ -251,7 +253,12 @@ export default function PaymentPage() {
             </CardContent>
           </Card>
 
-          <Button type="submit" className="w-full" size="lg" disabled={processing}>
+          <Button
+            type="submit"
+            className="w-full bg-gradient-to-r from-primary via-secondary to-accent hover:opacity-90"
+            size="lg"
+            disabled={processing}
+          >
             {processing ? "Procesando pago..." : `Pagar ${formatPrice(total)}`}
           </Button>
 

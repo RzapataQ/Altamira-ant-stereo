@@ -12,12 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { ArrowLeft, ArrowRight } from "lucide-react"
 import { useStore } from "@/lib/store"
-import { TIME_PACKAGES } from "@/lib/mock-data"
 import type { Child, Guardian } from "@/lib/types"
 
 export default function RegisterPage() {
   const router = useRouter()
-  const { selectedTimePackage, setChildInfo, setGuardianInfo, setTimePackage, currentUser } = useStore()
+  const { selectedTimePackage, setChildInfo, setGuardianInfo, setTimePackage, currentUser, timePackages } = useStore()
   const [step, setStep] = useState(1)
 
   // Child form state
@@ -257,7 +256,7 @@ export default function RegisterPage() {
             <form onSubmit={handlePackageSubmit}>
               <CardContent className="space-y-4">
                 <div className="space-y-3">
-                  {TIME_PACKAGES.map((pkg) => (
+                  {timePackages.map((pkg) => (
                     <label
                       key={pkg.id}
                       className={`flex items-center justify-between p-4 border-2 rounded-lg cursor-pointer transition-all ${
