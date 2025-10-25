@@ -67,6 +67,18 @@ interface StoreState {
   getAllUsers: () => User[]
 }
 
+const mergeUsers = (persistedUsers: User[] | undefined): User[] => {
+  if (!persistedUsers || persistedUsers.length === 0) {
+    return MOCK_USERS
+  }
+
+  // Always include MOCK_USERS (admin) and merge with persisted users
+  const mockUserIds = new Set(MOCK_USERS.map((u) => u.id))
+  const additionalUsers = persistedUsers.filter((u) => !mockUserIds.has(u.id))
+
+  return [...MOCK_USERS, ...additionalUsers]
+}
+
 export const useStore = create<StoreState>()(
   persist(
     (set, get) => ({
@@ -89,7 +101,10 @@ export const useStore = create<StoreState>()(
       currentUser: null,
 
       login: (username, password) => {
+        console.log("[v0] Login attempt:", username)
+        console.log("[v0] Available users:", get().users)
         const user = get().users.find((u) => u.username === username && u.password === password && u.active)
+        console.log("[v0] Found user:", user)
         if (user) {
           set({ currentUser: user })
           return true
@@ -179,7 +194,7 @@ export const useStore = create<StoreState>()(
       setAnnouncementMessage: (message) => set({ announcementMessage: message }),
 
       voiceSettings: {
-        voiceName: "es-ES-Standard-A", // Default Spanish voice
+        voiceName: "es-ES-Standard-A",
         rate: 0.9,
         pitch: 1.0,
       },
@@ -194,6 +209,7 @@ export const useStore = create<StoreState>()(
       ],
 
       addTimePackage: (pkg) => {
+        console.log("[v0] Adding time package:", pkg)
         set({ timePackages: [...get().timePackages, pkg] })
       },
 
@@ -262,12 +278,22 @@ export const useStore = create<StoreState>()(
     }),
     {
       name: "parke-tr3s-storage",
+      merge: (persistedState: any, currentState: StoreState) => {
+        return {
+          ...currentState,
+          ...persistedState,
+          // Always merge MOCK_USERS with persisted users
+          users: mergeUsers(persistedState?.users),
+        }
+      },
       partialize: (state) => ({
         users: state.users,
         cameras: state.cameras,
         timePackages: state.timePackages,
         announcementMessage: state.announcementMessage,
         voiceSettings: state.voiceSettings,
+        visitors: state.visitors,
+        purchases: state.purchases,
       }),
     },
   ),

@@ -66,19 +66,21 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10 p-4 md:p-8">
       <div className="max-w-2xl mx-auto">
         <Link
           href={currentUser.role === "admin" ? "/admin" : "/"}
-          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-primary mb-6"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Volver
         </Link>
 
-        <Card>
+        <Card className="border-2">
           <CardHeader>
-            <CardTitle>Configuración de Cuenta</CardTitle>
+            <CardTitle className="bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+              Configuración de Cuenta
+            </CardTitle>
             <CardDescription>Administra tu información y seguridad</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">

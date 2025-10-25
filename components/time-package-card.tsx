@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge"
 import type { TimePackageOption } from "@/lib/types"
 import { useRouter } from "next/navigation"
 import { useStore } from "@/lib/store"
-import { TIME_PACKAGES } from "@/lib/mock-data"
 
 interface TimePackageCardProps {
   package: TimePackageOption
@@ -15,6 +14,7 @@ interface TimePackageCardProps {
 export function TimePackageCard({ package: pkg }: TimePackageCardProps) {
   const router = useRouter()
   const setTimePackage = useStore((state) => state.setTimePackage)
+  const timePackages = useStore((state) => state.timePackages)
 
   const handleSelect = () => {
     setTimePackage(pkg.id)
@@ -30,7 +30,7 @@ export function TimePackageCard({ package: pkg }: TimePackageCardProps) {
   }
 
   const colors = ["#9c4eb3", "#3dc9a1", "#fa804f", "#fdbf2c", "#40c0dd"]
-  const colorIndex = TIME_PACKAGES.findIndex((p) => p.id === pkg.id) % colors.length
+  const colorIndex = timePackages.findIndex((p) => p.id === pkg.id) % colors.length
   const cardColor = colors[colorIndex]
 
   return (

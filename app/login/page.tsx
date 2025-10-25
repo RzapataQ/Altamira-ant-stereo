@@ -40,16 +40,18 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <Link href="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Volver al inicio
         </Link>
 
-        <Card>
+        <Card className="border-2">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold">Iniciar Sesión</CardTitle>
+            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+              Iniciar Sesión
+            </CardTitle>
             <CardDescription>Ingresa tus credenciales para acceder a tu cuenta</CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
@@ -89,12 +91,12 @@ export default function LoginPage() {
               </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-4">
-              <Button type="submit" className="w-full">
+              <Button type="submit" className="w-full bg-primary hover:bg-primary/90">
                 Iniciar Sesión
               </Button>
               <p className="text-sm text-center text-muted-foreground">
                 ¿No tienes cuenta?{" "}
-                <Link href="/register" className="text-primary hover:underline">
+                <Link href="/register" className="text-primary hover:underline font-medium">
                   Regístrate aquí
                 </Link>
               </p>

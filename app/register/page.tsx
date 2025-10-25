@@ -84,9 +84,9 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10 py-12 px-4">
       <div className="container mx-auto max-w-2xl">
-        <Link href="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6">
+        <Link href="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary mb-6">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Volver al inicio
         </Link>
@@ -96,15 +96,18 @@ export default function RegisterPage() {
             <span className={`text-sm font-medium ${step >= 1 ? "text-primary" : "text-muted-foreground"}`}>
               1. Información del Niño
             </span>
-            <span className={`text-sm font-medium ${step >= 2 ? "text-primary" : "text-muted-foreground"}`}>
+            <span className={`text-sm font-medium ${step >= 2 ? "text-secondary" : "text-muted-foreground"}`}>
               2. Información del Acudiente
             </span>
-            <span className={`text-sm font-medium ${step >= 3 ? "text-primary" : "text-muted-foreground"}`}>
+            <span className={`text-sm font-medium ${step >= 3 ? "text-accent" : "text-muted-foreground"}`}>
               3. Seleccionar Tiempo
             </span>
           </div>
           <div className="h-2 bg-muted rounded-full overflow-hidden">
-            <div className="h-full bg-primary transition-all duration-300" style={{ width: `${(step / 3) * 100}%` }} />
+            <div
+              className="h-full bg-gradient-to-r from-primary via-secondary to-accent transition-all duration-300"
+              style={{ width: `${(step / 3) * 100}%` }}
+            />
           </div>
         </div>
 

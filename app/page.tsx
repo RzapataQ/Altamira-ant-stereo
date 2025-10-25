@@ -2,7 +2,6 @@
 
 import { Button } from "@/components/ui/button"
 import { TimePackageCard } from "@/components/time-package-card"
-import { TIME_PACKAGES } from "@/lib/mock-data"
 import { useRouter } from "next/navigation"
 import { Sparkles, Clock, Shield, Heart } from "lucide-react"
 import { useStore } from "@/lib/store"
@@ -10,16 +9,14 @@ import { useStore } from "@/lib/store"
 export default function Home() {
   const router = useRouter()
   const currentUser = useStore((state) => state.currentUser)
+  const timePackages = useStore((state) => state.timePackages)
 
   const handleBuyClick = () => {
     if (!currentUser) {
-      // Not logged in, redirect to login
       router.push("/login")
     } else if (currentUser.role === "admin" || currentUser.role === "worker") {
-      // Authorized user, go to register
       router.push("/register")
     } else {
-      // Customer role, show alert
       alert("Solo trabajadores y administradores pueden vender entradas")
     }
   }
@@ -108,7 +105,7 @@ export default function Home() {
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
-            {TIME_PACKAGES.map((pkg) => (
+            {timePackages.map((pkg) => (
               <TimePackageCard key={pkg.id} package={pkg} />
             ))}
           </div>
@@ -147,17 +144,6 @@ export default function Home() {
                 Parke tr3s
               </h3>
               <p className="text-sm text-muted-foreground">Diversión segura para toda la familia</p>
-            </div>
-            <div className="flex gap-6">
-              <Button variant="ghost" onClick={() => router.push("/check-in")}>
-                Check-in
-              </Button>
-              <Button variant="ghost" onClick={() => router.push("/tracking")}>
-                Seguimiento
-              </Button>
-              <Button variant="ghost" onClick={() => router.push("/admin")}>
-                Admin
-              </Button>
             </div>
           </div>
           <div className="text-center text-sm text-muted-foreground mt-6">

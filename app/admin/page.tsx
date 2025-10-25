@@ -24,6 +24,7 @@ import {
   UserPlus,
   Camera,
   Video,
+  Download,
 } from "lucide-react"
 import Link from "next/link"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -70,6 +71,7 @@ export default function AdminPage() {
     minutes: "",
     price: "",
     description: "",
+    timeUnit: "minutes" as "minutes" | "hours",
   })
   const [isWorkerDialogOpen, setIsWorkerDialogOpen] = useState(false)
   const [editingWorker, setEditingWorker] = useState<any>(null)
@@ -141,10 +143,11 @@ export default function AdminPage() {
         minutes: pkg.minutes.toString(),
         price: pkg.price.toString(),
         description: pkg.description,
+        timeUnit: "minutes",
       })
     } else {
       setEditingPackage(null)
-      setPackageForm({ name: "", minutes: "", price: "", description: "" })
+      setPackageForm({ name: "", minutes: "", price: "", description: "", timeUnit: "minutes" })
     }
     setIsPackageDialogOpen(true)
   }
@@ -155,10 +158,15 @@ export default function AdminPage() {
       return
     }
 
+    const totalMinutes =
+      packageForm.timeUnit === "hours"
+        ? Number.parseInt(packageForm.minutes) * 60
+        : Number.parseInt(packageForm.minutes)
+
     const packageData = {
       id: editingPackage?.id || Date.now().toString(),
       name: packageForm.name,
-      minutes: Number.parseInt(packageForm.minutes),
+      minutes: totalMinutes,
       price: Number.parseInt(packageForm.price),
       description: packageForm.description,
     }
@@ -170,7 +178,7 @@ export default function AdminPage() {
     }
 
     setIsPackageDialogOpen(false)
-    setPackageForm({ name: "", minutes: "", price: "", description: "" })
+    setPackageForm({ name: "", minutes: "", price: "", description: "", timeUnit: "minutes" })
   }
 
   const handleDeletePackage = (id: string) => {
@@ -291,6 +299,49 @@ export default function AdminPage() {
     updateCamera(id, { active: !currentActive })
   }
 
+  const handleExportReports = () => {
+    const csvContent = [
+      [
+        "ID",
+        "Fecha",
+        "Niño/a",
+        "Acudiente",
+        "Teléfono",
+        "Paquete",
+        "Tiempo (min)",
+        "Total",
+        "Método Pago",
+        "Vendido Por",
+        "Estado",
+      ],
+      ...purchases.map((p) => [
+        p.id,
+        new Date(p.createdAt).toLocaleDateString("es-CO"),
+        p.visitor.child.name,
+        p.visitor.guardian.name,
+        p.visitor.guardian.phone,
+        timePackages.find((pkg) => pkg.id === p.visitor.timePackage)?.name || "",
+        p.visitor.totalMinutes,
+        p.amount,
+        p.visitor.paymentMethod,
+        p.visitor.soldBy || "N/A",
+        p.status,
+      ]),
+    ]
+      .map((row) => row.join(","))
+      .join("\n")
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    const link = document.createElement("a")
+    const url = URL.createObjectURL(blob)
+    link.setAttribute("href", url)
+    link.setAttribute("download", `parke-tr3s-reporte-${new Date().toISOString().split("T")[0]}.csv`)
+    link.style.visibility = "hidden"
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   const totalRevenue = purchases.reduce((sum, purchase) => sum + purchase.amount, 0)
   const totalVisitors = visitors.length
   const activeVisitors = visitors.filter((v) => v.status === "active").length
@@ -325,24 +376,34 @@ export default function AdminPage() {
       <div className="container mx-auto max-w-7xl">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold mb-2">Panel de Administración</h1>
+            <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+              Panel de Administración
+            </h1>
             <p className="text-muted-foreground">Gestiona las ventas y visitantes de Parke tr3s</p>
           </div>
           <div className="flex gap-3">
+            <Button onClick={handleExportReports} variant="outline" className="bg-white">
+              <Download className="h-4 w-4 mr-2" />
+              Descargar Reportes
+            </Button>
             <Link href="/tracking">
-              <Button variant="outline">
+              <Button variant="outline" className="bg-white">
                 <Activity className="h-4 w-4 mr-2" />
                 Control de Tiempo
               </Button>
             </Link>
             <Link href="/check-in">
-              <Button variant="outline">Check-In</Button>
+              <Button variant="outline" className="bg-white">
+                Check-In
+              </Button>
             </Link>
             <Link href="/settings">
-              <Button variant="outline">Configuración</Button>
+              <Button variant="outline" className="bg-white">
+                Configuración
+              </Button>
             </Link>
             <Link href="/">
-              <Button variant="outline">
+              <Button variant="outline" className="bg-white">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Inicio
               </Button>
@@ -442,7 +503,7 @@ export default function AdminPage() {
               </div>
               <Dialog open={isPackageDialogOpen} onOpenChange={setIsPackageDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button onClick={() => handleOpenPackageDialog()}>
+                  <Button onClick={() => handleOpenPackageDialog()} className="bg-primary hover:bg-primary/90">
                     <Plus className="h-4 w-4 mr-2" />
                     Nuevo Paquete
                   </Button>
@@ -464,15 +525,34 @@ export default function AdminPage() {
                         placeholder="Ej: 1 Hora"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="pkg-minutes">Minutos</Label>
-                      <Input
-                        id="pkg-minutes"
-                        type="number"
-                        value={packageForm.minutes}
-                        onChange={(e) => setPackageForm({ ...packageForm, minutes: e.target.value })}
-                        placeholder="60"
-                      />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="pkg-time">Tiempo</Label>
+                        <Input
+                          id="pkg-time"
+                          type="number"
+                          value={packageForm.minutes}
+                          onChange={(e) => setPackageForm({ ...packageForm, minutes: e.target.value })}
+                          placeholder="1"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="pkg-unit">Unidad</Label>
+                        <Select
+                          value={packageForm.timeUnit}
+                          onValueChange={(value: "minutes" | "hours") =>
+                            setPackageForm({ ...packageForm, timeUnit: value })
+                          }
+                        >
+                          <SelectTrigger id="pkg-unit">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="minutes">Minutos</SelectItem>
+                            <SelectItem value="hours">Horas</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="pkg-price">Precio (COP)</Label>
@@ -498,7 +578,9 @@ export default function AdminPage() {
                     <Button variant="outline" onClick={() => setIsPackageDialogOpen(false)}>
                       Cancelar
                     </Button>
-                    <Button onClick={handleSavePackage}>Guardar</Button>
+                    <Button onClick={handleSavePackage} className="bg-primary hover:bg-primary/90">
+                      Guardar
+                    </Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>

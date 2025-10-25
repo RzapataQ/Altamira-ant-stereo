@@ -6,12 +6,11 @@ import { useStore } from "@/lib/store"
 import { useRouter } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
-import { TIME_PACKAGES } from "@/lib/mock-data"
 import { useEffect } from "react"
 
 export default function CheckoutPage() {
   const router = useRouter()
-  const { currentChild, currentGuardian, selectedTimePackage, currentUser } = useStore()
+  const { currentChild, currentGuardian, selectedTimePackage, currentUser, timePackages } = useStore()
 
   useEffect(() => {
     if (!currentUser || (currentUser.role !== "admin" && currentUser.role !== "worker")) {
@@ -32,7 +31,7 @@ export default function CheckoutPage() {
     return null
   }
 
-  const selectedPackage = TIME_PACKAGES.find((pkg) => pkg.id === selectedTimePackage)
+  const selectedPackage = timePackages.find((pkg) => pkg.id === selectedTimePackage)
 
   if (!selectedPackage) {
     return null
@@ -51,17 +50,19 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10 py-12 px-4">
       <div className="container mx-auto max-w-4xl">
         <Link
           href="/register"
-          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-primary mb-6"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Volver al registro
         </Link>
 
-        <h1 className="text-3xl font-bold mb-8">Resumen de Compra</h1>
+        <h1 className="text-3xl font-bold mb-8 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+          Resumen de Compra
+        </h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
