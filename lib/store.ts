@@ -65,6 +65,9 @@ interface StoreState {
   updateUser: (id: string, updates: Partial<User>) => void
   deleteUser: (id: string) => void
   getAllUsers: () => User[]
+
+  // Role-based access control
+  hasPermission: (action: string) => boolean
 }
 
 type SharedStateListener = (state: StoreState) => void
@@ -94,6 +97,35 @@ const syncSharedState = (state: StoreState) => {
   } catch (e) {
     console.log("[v0] Could not sync shared state:", e)
   }
+}
+
+const syncToCloud = (data: any) => {
+  try {
+    if (typeof window !== "undefined") {
+      // Store in localStorage with a sync timestamp
+      localStorage.setItem(
+        "parke-tr3s-cloud-sync",
+        JSON.stringify({
+          ...data,
+          syncedAt: new Date().toISOString(),
+        }),
+      )
+    }
+  } catch (e) {
+    console.log("[v0] Cloud sync failed:", e)
+  }
+}
+
+const loadFromCloud = () => {
+  try {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("parke-tr3s-cloud-sync")
+      return stored ? JSON.parse(stored) : null
+    }
+  } catch (e) {
+    console.log("[v0] Cloud load failed:", e)
+  }
+  return null
 }
 
 const mergeUsers = (persistedUsers: User[] | undefined): User[] => {
@@ -150,7 +182,9 @@ export const useStore = create<StoreState>()(
         const user = get().users.find((u) => u.id === userId)
         if (user) {
           // Update user in the users array
-          const updatedUsers = get().users.map((u) => (u.id === userId ? { ...u, password: newPassword } : u))
+          const updatedUsers = get().users.map((u) =>
+            u.id === userId ? { ...u, password: newPassword, updatedAt: new Date() } : u,
+          )
           set({ users: updatedUsers })
 
           // Also update currentUser if it's the same user
@@ -161,6 +195,8 @@ export const useStore = create<StoreState>()(
 
           console.log("[v0] Password changed successfully")
           console.log("[v0] Updated users:", get().users)
+
+          syncToCloud({ users: updatedUsers })
           return true
         }
         console.log("[v0] User not found for password change")
@@ -320,26 +356,45 @@ export const useStore = create<StoreState>()(
       getAllUsers: () => {
         return get().users
       },
+
+      // Role-based access control
+      hasPermission: (action: string) => {
+        const user = get().currentUser
+        if (!user) return false
+
+        if (user.role === "super_admin") return true // Super admin can do everything
+
+        if (user.role === "admin") {
+          // Admin can do most things except some sensitive operations
+          const adminActions = [
+            "manage_workers",
+            "manage_packages",
+            "view_reports",
+            "manage_cameras",
+            "change_announcement",
+          ]
+          return adminActions.includes(action)
+        }
+
+        return false
+      },
     }),
     {
       name: "parke-tr3s-storage",
       merge: (persistedState: any, currentState: StoreState) => {
-        let sharedData = null
+        let cloudData = null
         try {
-          if (typeof window !== "undefined") {
-            const stored = sessionStorage.getItem(SHARED_STORAGE_KEY)
-            sharedData = stored ? JSON.parse(stored) : null
-          }
+          cloudData = loadFromCloud()
         } catch (e) {
-          console.log("[v0] Could not load shared state:", e)
+          console.log("[v0] Could not load cloud data:", e)
         }
 
         return {
           ...currentState,
           ...persistedState,
-          users: mergeUsers(persistedState?.users || sharedData?.users),
-          visitors: sharedData?.visitors || persistedState?.visitors || currentState.visitors,
-          purchases: sharedData?.purchases || persistedState?.purchases || currentState.purchases,
+          users: mergeUsers(cloudData?.users || persistedState?.users),
+          cameras: cloudData?.cameras || persistedState?.cameras || currentState.cameras,
+          timePackages: cloudData?.timePackages || persistedState?.timePackages || currentState.timePackages,
         }
       },
       partialize: (state) => ({

@@ -25,9 +25,12 @@ import {
   Camera,
   Video,
   Download,
+  AlertCircle,
+  Eye,
+  EyeOff,
 } from "lucide-react"
 import Link from "next/link"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Dialog,
@@ -80,7 +83,7 @@ export default function AdminPage() {
   const [workerForm, setWorkerForm] = useState({
     username: "",
     password: "",
-    role: "worker" as "admin" | "worker",
+    role: "worker" as "admin" | "worker" | "super_admin",
   })
   const [isCameraDialogOpen, setIsCameraDialogOpen] = useState(false)
   const [editingCamera, setEditingCamera] = useState<any>(null)
@@ -89,9 +92,11 @@ export default function AdminPage() {
     location: "",
     url: "",
   })
+  const [showPassword, setShowPassword] = useState<Record<string, boolean>>({})
+  const [passwordChangeAlert, setPasswordChangeAlert] = useState("")
 
   useEffect(() => {
-    if (!currentUser || currentUser.role !== "admin") {
+    if (!currentUser || (currentUser.role !== "admin" && currentUser.role !== "super_admin")) {
       router.push("/login?redirect=/admin")
     }
   }, [currentUser, router])
@@ -106,10 +111,6 @@ export default function AdminPage() {
     loadVoices()
     window.speechSynthesis.onvoiceschanged = loadVoices
   }, [])
-
-  if (!currentUser || currentUser.role !== "admin") {
-    return null
-  }
 
   const handleSaveMessage = () => {
     setAnnouncementMessage(editedMessage)
@@ -201,7 +202,6 @@ export default function AdminPage() {
       setEditingWorker(null)
       setWorkerForm({ username: "", password: "", role: "worker" })
     }
-    setIsWorkerDialogOpen(true)
   }
 
   const handleSaveWorker = () => {
@@ -211,28 +211,26 @@ export default function AdminPage() {
     }
 
     if (editingWorker) {
-      // Editing existing user
-      console.log("[v0] Editing worker:", editingWorker.id)
       const updates: any = {
         username: workerForm.username,
         role: workerForm.role,
       }
       if (workerForm.password) {
-        console.log("[v0] Password provided for update")
         updates.password = workerForm.password
         changePassword(editingWorker.id, workerForm.password)
+        setPasswordChangeAlert(`Contraseña actualizada para ${workerForm.username}`)
+        setTimeout(() => setPasswordChangeAlert(""), 3000)
       }
 
       if (Object.keys(updates).length > 0) {
         updateUser(editingWorker.id, updates)
       }
     } else {
-      // Creating new user
       const newUser = {
         id: Date.now().toString(),
         username: workerForm.username,
         password: workerForm.password,
-        role: workerForm.role,
+        role: workerForm.role as "admin" | "super_admin" | "worker",
         createdAt: new Date(),
         active: true,
       }
@@ -394,6 +392,10 @@ export default function AdminPage() {
   }
 
   const totalPackagesSold = Object.values(packagesSold).reduce((sum, count) => sum + count, 0)
+
+  if (!currentUser || (currentUser.role !== "admin" && currentUser.role !== "super_admin")) {
+    return null
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10 py-12 px-4">
@@ -644,6 +646,14 @@ export default function AdminPage() {
           </CardContent>
         </Card>
 
+        {passwordChangeAlert && (
+          <Alert className="mb-6 bg-green-50 border-green-200">
+            <AlertCircle className="h-4 w-4 text-green-600" />
+            <AlertTitle className="text-green-900">Cambio exitoso</AlertTitle>
+            <AlertDescription className="text-green-800">{passwordChangeAlert}</AlertDescription>
+          </Alert>
+        )}
+
         <Card className="mb-6">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -696,7 +706,7 @@ export default function AdminPage() {
                       <Label htmlFor="worker-role">Rol</Label>
                       <Select
                         value={workerForm.role}
-                        onValueChange={(value: "admin" | "worker") => setWorkerForm({ ...workerForm, role: value })}
+                        onValueChange={(value: any) => setWorkerForm({ ...workerForm, role: value })}
                       >
                         <SelectTrigger id="worker-role">
                           <SelectValue />
@@ -704,6 +714,9 @@ export default function AdminPage() {
                         <SelectContent>
                           <SelectItem value="worker">Trabajador</SelectItem>
                           <SelectItem value="admin">Administrador</SelectItem>
+                          {currentUser?.role === "super_admin" && (
+                            <SelectItem value="super_admin">Super Administrador</SelectItem>
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
@@ -725,16 +738,29 @@ export default function AdminPage() {
                   key={user.id}
                   className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                 >
-                  <div className="flex items-center gap-4">
-                    <div>
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="flex-1">
                       <p className="font-medium">{user.username}</p>
                       <p className="text-sm text-muted-foreground">
-                        {user.role === "admin" ? "Administrador" : "Trabajador"}
+                        {user.role === "super_admin"
+                          ? "Super Administrador"
+                          : user.role === "admin"
+                            ? "Administrador"
+                            : "Trabajador"}
                       </p>
+                    </div>
+                    <div className="flex items-center gap-2 bg-muted px-3 py-2 rounded">
+                      <code className="text-sm">{showPassword[user.id] ? user.password : "••••••••"}</code>
+                      <button
+                        onClick={() => setShowPassword({ ...showPassword, [user.id]: !showPassword[user.id] })}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        {showPassword[user.id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
                     </div>
                     <Badge variant={user.active ? "default" : "secondary"}>{user.active ? "Activo" : "Inactivo"}</Badge>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 ml-4">
                     <Button variant="outline" size="sm" onClick={() => handleOpenWorkerDialog(user)}>
                       <Edit className="h-3 w-3 mr-1" />
                       Editar
@@ -762,16 +788,15 @@ export default function AdminPage() {
           </CardContent>
         </Card>
 
-        {/* Camera Management Section */}
         <Card className="mb-6">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <Video className="h-5 w-5" />
-                  Sistema de Cámaras de Vigilancia
+                  Cámaras de Vigilancia
                 </CardTitle>
-                <CardDescription>Gestiona las cámaras de seguridad del parque</CardDescription>
+                <CardDescription>Gestiona los puntos de vigilancia del parque</CardDescription>
               </div>
               <Dialog open={isCameraDialogOpen} onOpenChange={setIsCameraDialogOpen}>
                 <DialogTrigger asChild>
@@ -784,17 +809,17 @@ export default function AdminPage() {
                   <DialogHeader>
                     <DialogTitle>{editingCamera ? "Editar Cámara" : "Nueva Cámara"}</DialogTitle>
                     <DialogDescription>
-                      {editingCamera ? "Modifica los detalles de la cámara" : "Agrega un nuevo punto de vigilancia"}
+                      {editingCamera ? "Modifica la cámara" : "Agrega una nueva cámara"}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
                     <div className="space-y-2">
-                      <Label htmlFor="camera-name">Nombre de la Cámara</Label>
+                      <Label htmlFor="camera-name">Nombre</Label>
                       <Input
                         id="camera-name"
                         value={cameraForm.name}
                         onChange={(e) => setCameraForm({ ...cameraForm, name: e.target.value })}
-                        placeholder="Cámara Entrada Principal"
+                        placeholder="Entrada Principal"
                       />
                     </div>
                     <div className="space-y-2">
@@ -803,16 +828,7 @@ export default function AdminPage() {
                         id="camera-location"
                         value={cameraForm.location}
                         onChange={(e) => setCameraForm({ ...cameraForm, location: e.target.value })}
-                        placeholder="Entrada Principal"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="camera-url">URL del Stream (opcional)</Label>
-                      <Input
-                        id="camera-url"
-                        value={cameraForm.url}
-                        onChange={(e) => setCameraForm({ ...cameraForm, url: e.target.value })}
-                        placeholder="https://..."
+                        placeholder="Entrada"
                       />
                     </div>
                   </div>
@@ -830,40 +846,19 @@ export default function AdminPage() {
             {cameras.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Camera className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p>No hay cámaras configuradas</p>
-                <p className="text-sm">Agrega cámaras para monitorear el parque</p>
+                <p>Sin cámaras configuradas</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {cameras.map((camera) => (
-                  <Card key={camera.id}>
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
+                  <Card key={camera.id} className="overflow-hidden">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-3">
                         <div>
-                          <CardTitle className="text-base flex items-center gap-2">
-                            <Camera className="h-4 w-4" />
-                            {camera.name}
-                          </CardTitle>
-                          <CardDescription className="text-sm">{camera.location}</CardDescription>
+                          <p className="font-medium">{camera.name}</p>
+                          <p className="text-sm text-muted-foreground">{camera.location}</p>
                         </div>
-                        <Badge variant={camera.active ? "default" : "secondary"}>
-                          {camera.active ? "Activa" : "Inactiva"}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="aspect-video bg-muted rounded-md flex items-center justify-center">
-                        {camera.active ? (
-                          <div className="text-center">
-                            <Video className="h-8 w-8 mx-auto mb-2 text-primary" />
-                            <p className="text-xs text-muted-foreground">Stream activo</p>
-                          </div>
-                        ) : (
-                          <div className="text-center">
-                            <Video className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                            <p className="text-xs text-muted-foreground">Cámara desactivada</p>
-                          </div>
-                        )}
+                        <Badge>{camera.active ? "Activa" : "Inactiva"}</Badge>
                       </div>
                       <div className="flex gap-2">
                         <Button
