@@ -6,7 +6,6 @@ import type { Visitor, User, Purchase, Child, Guardian, TimePackage, Camera } fr
 import { MOCK_USERS, MOCK_VISITORS, MOCK_PURCHASES } from "./mock-data"
 
 interface StoreState {
-  // Current registration
   currentChild: Child | null
   currentGuardian: Guardian | null
   selectedTimePackage: TimePackage | null
@@ -15,30 +14,25 @@ interface StoreState {
   setTimePackage: (packageId: TimePackage) => void
   clearRegistration: () => void
 
-  // Auth
   currentUser: User | null
   login: (username: string, password: string) => boolean
   logout: () => void
   changePassword: (userId: string, newPassword: string) => boolean
 
-  // Visitors
   visitors: Visitor[]
   addVisitor: (visitor: Visitor) => void
   updateVisitor: (id: string, updates: Partial<Visitor>) => void
   getActiveVisitors: () => Visitor[]
   getVisitorById: (id: string) => Visitor | undefined
 
-  // Purchases
   purchases: Purchase[]
   addPurchase: (purchase: Purchase) => void
 
-  // Time tracking
   startSession: (visitorId: string) => void
   pauseSession: (visitorId: string) => void
   endSession: (visitorId: string) => void
   addTime: (visitorId: string, minutes: number) => void
 
-  // Admin settings
   announcementMessage: string
   setAnnouncementMessage: (message: string) => void
   voiceSettings: {
@@ -52,59 +46,34 @@ interface StoreState {
   updateTimePackage: (id: string, updates: Partial<TimePackage>) => void
   deleteTimePackage: (id: string) => void
 
-  // Camera management
   cameras: Camera[]
   addCamera: (camera: Camera) => void
   updateCamera: (id: string, updates: Partial<Camera>) => void
   deleteCamera: (id: string) => void
   getAllCameras: () => Camera[]
 
-  // User management functions
   users: User[]
   addUser: (user: User) => void
   updateUser: (id: string, updates: Partial<User>) => void
   deleteUser: (id: string) => void
   getAllUsers: () => User[]
 
-  // Role-based access control
   hasPermission: (action: string) => boolean
 }
 
-type SharedStateListener = (state: StoreState) => void
+const SYNC_KEY = "parke-tr3s-global-sync"
 
-const sharedStateListeners = new Set<SharedStateListener>()
-
-// Store shared data in SessionStorage (persists across browser tabs but not devices)
-const SHARED_STORAGE_KEY = "parke-tr3s-shared"
-
-const syncSharedState = (state: StoreState) => {
+const syncDataGlobally = (data: {
+  users: User[]
+  purchases: Purchase[]
+  visitors: Visitor[]
+  cameras: Camera[]
+  timePackages: TimePackage[]
+}) => {
   try {
-    if (typeof window !== "undefined") {
-      const sharedData = {
-        users: state.users,
-        purchases: state.purchases,
-        visitors: state.visitors,
-      }
-      sessionStorage.setItem(SHARED_STORAGE_KEY, JSON.stringify(sharedData))
-
-      // Notify other tabs via BroadcastChannel
-      if (typeof BroadcastChannel !== "undefined") {
-        const channel = new BroadcastChannel("parke-tr3s-sync")
-        channel.postMessage({ type: "sync", data: sharedData })
-        channel.close()
-      }
-    }
-  } catch (e) {
-    console.log("[v0] Could not sync shared state:", e)
-  }
-}
-
-const syncToCloud = (data: any) => {
-  try {
-    if (typeof window !== "undefined") {
-      // Store in localStorage with a sync timestamp
+    if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
       localStorage.setItem(
-        "parke-tr3s-cloud-sync",
+        SYNC_KEY,
         JSON.stringify({
           ...data,
           syncedAt: new Date().toISOString(),
@@ -112,18 +81,18 @@ const syncToCloud = (data: any) => {
       )
     }
   } catch (e) {
-    console.log("[v0] Cloud sync failed:", e)
+    console.log("[v0] Global sync failed:", e)
   }
 }
 
-const loadFromCloud = () => {
+const loadGlobalSync = () => {
   try {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("parke-tr3s-cloud-sync")
-      return stored ? JSON.parse(stored) : null
+    if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
+      const data = localStorage.getItem(SYNC_KEY)
+      return data ? JSON.parse(data) : null
     }
   } catch (e) {
-    console.log("[v0] Cloud load failed:", e)
+    console.log("[v0] Global load failed:", e)
   }
   return null
 }
@@ -133,7 +102,7 @@ const mergeUsers = (persistedUsers: User[] | undefined): User[] => {
     return MOCK_USERS
   }
 
-  // Always include MOCK_USERS (admin and super_admin) and merge with persisted users
+  // Always include MOCK_USERS (admin and super_admin)
   const mockUserIds = new Set(MOCK_USERS.map((u) => u.id))
   const additionalUsers = persistedUsers.filter((u) => !mockUserIds.has(u.id))
 
@@ -143,7 +112,6 @@ const mergeUsers = (persistedUsers: User[] | undefined): User[] => {
 export const useStore = create<StoreState>()(
   persist(
     (set, get) => ({
-      // Registration state
       currentChild: null,
       currentGuardian: null,
       selectedTimePackage: null,
@@ -158,7 +126,6 @@ export const useStore = create<StoreState>()(
           selectedTimePackage: null,
         }),
 
-      // Auth state
       currentUser: null,
 
       login: (username, password) => {
@@ -177,45 +144,55 @@ export const useStore = create<StoreState>()(
 
       changePassword: (userId, newPassword) => {
         console.log("[v0] Changing password for user:", userId)
-        console.log("[v0] Current users before update:", get().users)
-
         const user = get().users.find((u) => u.id === userId)
         if (user) {
-          // Update user in the users array
           const updatedUsers = get().users.map((u) =>
             u.id === userId ? { ...u, password: newPassword, updatedAt: new Date() } : u,
           )
           set({ users: updatedUsers })
 
-          // Also update currentUser if it's the same user
           const currentUser = get().currentUser
           if (currentUser && currentUser.id === userId) {
             set({ currentUser: { ...currentUser, password: newPassword } })
           }
 
-          console.log("[v0] Password changed successfully")
-          console.log("[v0] Updated users:", get().users)
+          syncDataGlobally({
+            users: updatedUsers,
+            purchases: get().purchases,
+            visitors: get().visitors,
+            cameras: get().cameras,
+            timePackages: get().timePackages,
+          })
 
-          syncToCloud({ users: updatedUsers })
           return true
         }
-        console.log("[v0] User not found for password change")
         return false
       },
 
-      // Visitors state
       visitors: MOCK_VISITORS,
 
       addVisitor: (visitor) => {
         const newVisitors = [...get().visitors, visitor]
         set({ visitors: newVisitors })
-        syncSharedState({ ...get() })
+        syncDataGlobally({
+          users: get().users,
+          purchases: get().purchases,
+          visitors: newVisitors,
+          cameras: get().cameras,
+          timePackages: get().timePackages,
+        })
       },
 
       updateVisitor: (id, updates) => {
         const updatedVisitors = get().visitors.map((v) => (v.id === id ? { ...v, ...updates } : v))
         set({ visitors: updatedVisitors })
-        syncSharedState({ ...get() })
+        syncDataGlobally({
+          users: get().users,
+          purchases: get().purchases,
+          visitors: updatedVisitors,
+          cameras: get().cameras,
+          timePackages: get().timePackages,
+        })
       },
 
       getActiveVisitors: () => {
@@ -226,16 +203,20 @@ export const useStore = create<StoreState>()(
         return get().visitors.find((v) => v.id === id)
       },
 
-      // Purchases state
       purchases: MOCK_PURCHASES,
 
       addPurchase: (purchase) => {
         const newPurchases = [...get().purchases, purchase]
         set({ purchases: newPurchases })
-        syncSharedState({ ...get() })
+        syncDataGlobally({
+          users: get().users,
+          purchases: newPurchases,
+          visitors: get().visitors,
+          cameras: get().cameras,
+          timePackages: get().timePackages,
+        })
       },
 
-      // Time tracking
       startSession: (visitorId) => {
         get().updateVisitor(visitorId, {
           status: "active",
@@ -267,7 +248,6 @@ export const useStore = create<StoreState>()(
         }
       },
 
-      // Admin settings
       announcementMessage:
         "{{childName}} y {{guardianName}}, les faltan 5 minutos. Si desea seguir con la diversión, acérquese al puesto de información o ingreso para recargar más tiempo en el parque.",
 
@@ -289,38 +269,76 @@ export const useStore = create<StoreState>()(
       ],
 
       addTimePackage: (pkg) => {
-        console.log("[v0] Adding time package:", pkg)
-        set({ timePackages: [...get().timePackages, pkg] })
+        const newPackages = [...get().timePackages, pkg]
+        set({ timePackages: newPackages })
+        syncDataGlobally({
+          users: get().users,
+          purchases: get().purchases,
+          visitors: get().visitors,
+          cameras: get().cameras,
+          timePackages: newPackages,
+        })
       },
 
       updateTimePackage: (id, updates) => {
-        set({
-          timePackages: get().timePackages.map((p) => (p.id === id ? { ...p, ...updates } : p)),
+        const newPackages = get().timePackages.map((p) => (p.id === id ? { ...p, ...updates } : p))
+        set({ timePackages: newPackages })
+        syncDataGlobally({
+          users: get().users,
+          purchases: get().purchases,
+          visitors: get().visitors,
+          cameras: get().cameras,
+          timePackages: newPackages,
         })
       },
 
       deleteTimePackage: (id) => {
-        set({
-          timePackages: get().timePackages.filter((p) => p.id !== id),
+        const newPackages = get().timePackages.filter((p) => p.id !== id)
+        set({ timePackages: newPackages })
+        syncDataGlobally({
+          users: get().users,
+          purchases: get().purchases,
+          visitors: get().visitors,
+          cameras: get().cameras,
+          timePackages: newPackages,
         })
       },
 
-      // Camera management
       cameras: [],
 
       addCamera: (camera) => {
-        set({ cameras: [...get().cameras, camera] })
+        const newCameras = [...get().cameras, camera]
+        set({ cameras: newCameras })
+        syncDataGlobally({
+          users: get().users,
+          purchases: get().purchases,
+          visitors: get().visitors,
+          cameras: newCameras,
+          timePackages: get().timePackages,
+        })
       },
 
       updateCamera: (id, updates) => {
-        set({
-          cameras: get().cameras.map((c) => (c.id === id ? { ...c, ...updates } : c)),
+        const newCameras = get().cameras.map((c) => (c.id === id ? { ...c, ...updates } : c))
+        set({ cameras: newCameras })
+        syncDataGlobally({
+          users: get().users,
+          purchases: get().purchases,
+          visitors: get().visitors,
+          cameras: newCameras,
+          timePackages: get().timePackages,
         })
       },
 
       deleteCamera: (id) => {
-        set({
-          cameras: get().cameras.filter((c) => c.id !== id),
+        const newCameras = get().cameras.filter((c) => c.id !== id)
+        set({ cameras: newCameras })
+        syncDataGlobally({
+          users: get().users,
+          purchases: get().purchases,
+          visitors: get().visitors,
+          cameras: newCameras,
+          timePackages: get().timePackages,
         })
       },
 
@@ -328,28 +346,41 @@ export const useStore = create<StoreState>()(
         return get().cameras
       },
 
-      // User management functions
       users: MOCK_USERS,
 
       addUser: (user) => {
-        console.log("[v0] Adding new user:", user)
         const newUsers = [...get().users, user]
         set({ users: newUsers })
-        console.log("[v0] Users after adding:", newUsers)
-        syncSharedState({ ...get() })
+        syncDataGlobally({
+          users: newUsers,
+          purchases: get().purchases,
+          visitors: get().visitors,
+          cameras: get().cameras,
+          timePackages: get().timePackages,
+        })
       },
 
       updateUser: (id, updates) => {
-        console.log("[v0] Updating user:", id, updates)
-        set({
-          users: get().users.map((u) => (u.id === id ? { ...u, ...updates } : u)),
+        const newUsers = get().users.map((u) => (u.id === id ? { ...u, ...updates } : u))
+        set({ users: newUsers })
+        syncDataGlobally({
+          users: newUsers,
+          purchases: get().purchases,
+          visitors: get().visitors,
+          cameras: get().cameras,
+          timePackages: get().timePackages,
         })
       },
 
       deleteUser: (id) => {
-        console.log("[v0] Deleting user:", id)
-        set({
-          users: get().users.filter((u) => u.id !== id),
+        const newUsers = get().users.filter((u) => u.id !== id)
+        set({ users: newUsers })
+        syncDataGlobally({
+          users: newUsers,
+          purchases: get().purchases,
+          visitors: get().visitors,
+          cameras: get().cameras,
+          timePackages: get().timePackages,
         })
       },
 
@@ -357,15 +388,13 @@ export const useStore = create<StoreState>()(
         return get().users
       },
 
-      // Role-based access control
       hasPermission: (action: string) => {
         const user = get().currentUser
         if (!user) return false
 
-        if (user.role === "super_admin") return true // Super admin can do everything
+        if (user.role === "super_admin") return true
 
         if (user.role === "admin") {
-          // Admin can do most things except some sensitive operations
           const adminActions = [
             "manage_workers",
             "manage_packages",
@@ -382,19 +411,21 @@ export const useStore = create<StoreState>()(
     {
       name: "parke-tr3s-storage",
       merge: (persistedState: any, currentState: StoreState) => {
-        let cloudData = null
+        let globalData = null
         try {
-          cloudData = loadFromCloud()
+          globalData = loadGlobalSync()
         } catch (e) {
-          console.log("[v0] Could not load cloud data:", e)
+          console.log("[v0] Could not load global sync data:", e)
         }
 
         return {
           ...currentState,
           ...persistedState,
-          users: mergeUsers(cloudData?.users || persistedState?.users),
-          cameras: cloudData?.cameras || persistedState?.cameras || currentState.cameras,
-          timePackages: cloudData?.timePackages || persistedState?.timePackages || currentState.timePackages,
+          users: mergeUsers(globalData?.users || persistedState?.users),
+          cameras: globalData?.cameras || persistedState?.cameras || currentState.cameras,
+          timePackages: globalData?.timePackages || persistedState?.timePackages || currentState.timePackages,
+          purchases: globalData?.purchases || persistedState?.purchases || currentState.purchases,
+          visitors: globalData?.visitors || persistedState?.visitors || currentState.visitors,
         }
       },
       partialize: (state) => ({

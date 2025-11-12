@@ -33,7 +33,7 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
             stopScanner()
           },
           (errorMessage) => {
-            // Ignore scanning errors (they happen continuously while scanning)
+            // Ignore scanning errors
           },
         )
 
@@ -49,7 +49,7 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
     return () => {
       stopScanner()
     }
-  }, [])
+  }, [onScan])
 
   const stopScanner = async () => {
     if (scannerRef.current) {
@@ -65,7 +65,7 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
 
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-      <div className="bg-background rounded-lg max-w-md w-full p-6">
+      <div className="bg-background rounded-lg w-full max-w-md p-4 sm:p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Camera className="h-5 w-5" />

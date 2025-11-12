@@ -97,6 +97,7 @@ export default function AdminPage() {
   })
   const [showPassword, setShowPassword] = useState<Record<string, boolean>>({})
   const [passwordChangeAlert, setPasswordChangeAlert] = useState("")
+  const [showCameraScanner, setShowCameraScanner] = useState(false) // State for camera scanner dialog
 
   useEffect(() => {
     if (!currentUser || (currentUser.role !== "admin" && currentUser.role !== "super_admin")) {
@@ -274,6 +275,7 @@ export default function AdminPage() {
       setCameraForm({ name: "", location: "", url: "", wifiSSID: "", wifiQR: "", connectionMethod: "manual" })
     }
     setIsCameraDialogOpen(true)
+    setShowCameraScanner(false) // Reset scanner state when opening dialog
   }
 
   const handleSaveCamera = () => {
@@ -302,6 +304,7 @@ export default function AdminPage() {
 
     setIsCameraDialogOpen(false)
     setCameraForm({ name: "", location: "", url: "", wifiSSID: "", wifiQR: "", connectionMethod: "manual" })
+    setShowCameraScanner(false) // Reset scanner state when closing dialog
   }
 
   const handleDeleteCamera = (id: string) => {
@@ -859,12 +862,23 @@ export default function AdminPage() {
                     {cameraForm.connectionMethod === "qr" && (
                       <div className="space-y-2 p-3 bg-green-50 rounded-lg border border-green-200">
                         <Label htmlFor="camera-qr">Escanear QR de Cámara</Label>
-                        <Input
-                          id="camera-qr"
-                          value={cameraForm.wifiQR}
-                          onChange={(e) => setCameraForm({ ...cameraForm, wifiQR: e.target.value })}
-                          placeholder="Escanea el código QR de la cámara"
-                        />
+                        <div className="flex gap-2">
+                          <Input
+                            id="camera-qr"
+                            value={cameraForm.wifiQR}
+                            onChange={(e) => setCameraForm({ ...cameraForm, wifiQR: e.target.value })}
+                            placeholder="Escanea el código QR de la cámara"
+                            readOnly
+                          />
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => setShowCameraScanner(true)}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            <Camera className="h-4 w-4" />
+                          </Button>
+                        </div>
                         <p className="text-xs text-green-700 mt-2">
                           Usa la cámara de tu dispositivo para escanear el código QR de la cámara de vigilancia
                         </p>
@@ -1143,6 +1157,27 @@ export default function AdminPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Camera Scanner Dialog - Placeholder */}
+      {showCameraScanner && (
+        <Dialog open={showCameraScanner} onOpenChange={setShowCameraScanner}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Escanear QR de Cámara</DialogTitle>
+              <DialogDescription>Apunta tu cámara al código QR de la cámara de vigilancia.</DialogDescription>
+            </DialogHeader>
+            <div className="flex items-center justify-center h-64">
+              {/* Placeholder for actual QR scanner component */}
+              <p className="text-muted-foreground">Integrar un componente de escaneo de QR aquí.</p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowCameraScanner(false)}>
+                Cancelar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }

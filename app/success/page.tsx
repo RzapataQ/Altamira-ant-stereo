@@ -16,6 +16,8 @@ export default function SuccessPage() {
   const router = useRouter()
   const visitorId = searchParams.get("visitorId")
   const visitors = useStore((state) => state.visitors)
+  const addVisitor = useStore((state) => state.addVisitor)
+  const updateVisitor = useStore((state) => state.updateVisitor)
   const [visitor, setVisitor] = useState<(typeof visitors)[0] | null>(null)
 
   useEffect(() => {
@@ -23,7 +25,16 @@ export default function SuccessPage() {
     console.log("[v0] Success page - Total visitors in store:", visitors.length)
 
     if (visitorId) {
-      const found = visitors.find((v) => v.id === visitorId)
+      let found = visitors.find((v) => v.id === visitorId)
+
+      if (found && !found.qrData) {
+        console.log("[v0] Visitor found but missing QR data, generating and saving...")
+        const { generateQRData } = require("@/lib/qr-generator")
+        const qrData = generateQRData(found)
+        found = { ...found, qrData }
+        updateVisitor(visitorId, { qrData })
+      }
+
       if (found) {
         console.log("[v0] Success page - Visitor found:", found.id)
         console.log("[v0] Success page - QR data:", found.qrData)
@@ -47,7 +58,7 @@ export default function SuccessPage() {
       console.log("[v0] Success page - No visitor ID in URL, redirecting to home")
       router.push("/")
     }
-  }, [visitorId, visitors, router])
+  }, [visitorId, visitors, router, addVisitor, updateVisitor])
 
   if (!visitor) {
     return null
