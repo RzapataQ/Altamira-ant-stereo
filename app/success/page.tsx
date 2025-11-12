@@ -9,6 +9,7 @@ import { CheckCircle2, Download, Home, Clock, Printer } from "lucide-react"
 import Link from "next/link"
 import { generateQRCodeURL } from "@/lib/qr-generator"
 import Image from "next/image"
+import { addPendingPurchase } from "@/lib/qr-validation"
 
 export default function SuccessPage() {
   const searchParams = useSearchParams()
@@ -27,6 +28,17 @@ export default function SuccessPage() {
         console.log("[v0] Success page - Visitor found:", found.id)
         console.log("[v0] Success page - QR data:", found.qrData)
         setVisitor(found)
+
+        addPendingPurchase({
+          id: `pending-${Date.now()}`,
+          visitorId: found.id,
+          qrCode: found.qrData,
+          childName: found.child.name,
+          guardianName: found.guardian.name,
+          guardianPhone: found.guardian.phone,
+          status: "pending",
+          createdAt: new Date(),
+        })
       } else {
         console.log("[v0] Success page - Visitor NOT found, redirecting to home")
         router.push("/")

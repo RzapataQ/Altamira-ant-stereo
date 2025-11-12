@@ -5,11 +5,13 @@ import { TimePackageCard } from "@/components/time-package-card"
 import { useRouter } from "next/navigation"
 import { Sparkles, Clock, Shield, Heart } from "lucide-react"
 import { useStore } from "@/lib/store"
+import { useState } from "react"
 
 export default function Home() {
   const router = useRouter()
   const currentUser = useStore((state) => state.currentUser)
   const timePackages = useStore((state) => state.timePackages)
+  const [activeTab, setActiveTab] = useState("buy")
 
   const handleBuyClick = () => {
     if (!currentUser) {
@@ -50,6 +52,35 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Check-in Tab - Only for entrance staff */}
+      {currentUser && currentUser.role === "worker" && (
+        <section className="py-16 bg-blue-50 border-t-4 border-blue-400">
+          <div className="container mx-auto px-4">
+            <div className="max-w-2xl mx-auto">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                </div>
+                <h2 className="text-3xl font-bold text-blue-900">Validar Entrada en la Puerta</h2>
+              </div>
+              <p className="text-blue-800 mb-6">
+                Si eres personal de entrada, utiliza esta función para validar los códigos QR de las entradas vendidas y
+                permitir el acceso al parque.
+              </p>
+              <Button
+                size="lg"
+                onClick={() => router.push("/check-in")}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Ir a Validar QR
+              </Button>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Features Section */}
       <section className="py-16 bg-background">

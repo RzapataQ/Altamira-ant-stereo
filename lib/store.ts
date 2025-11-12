@@ -67,6 +67,35 @@ interface StoreState {
   getAllUsers: () => User[]
 }
 
+type SharedStateListener = (state: StoreState) => void
+
+const sharedStateListeners = new Set<SharedStateListener>()
+
+// Store shared data in SessionStorage (persists across browser tabs but not devices)
+const SHARED_STORAGE_KEY = "parke-tr3s-shared"
+
+const syncSharedState = (state: StoreState) => {
+  try {
+    if (typeof window !== "undefined") {
+      const sharedData = {
+        users: state.users,
+        purchases: state.purchases,
+        visitors: state.visitors,
+      }
+      sessionStorage.setItem(SHARED_STORAGE_KEY, JSON.stringify(sharedData))
+
+      // Notify other tabs via BroadcastChannel
+      if (typeof BroadcastChannel !== "undefined") {
+        const channel = new BroadcastChannel("parke-tr3s-sync")
+        channel.postMessage({ type: "sync", data: sharedData })
+        channel.close()
+      }
+    }
+  } catch (e) {
+    console.log("[v0] Could not sync shared state:", e)
+  }
+}
+
 const mergeUsers = (persistedUsers: User[] | undefined): User[] => {
   if (!persistedUsers || persistedUsers.length === 0) {
     return MOCK_USERS
@@ -131,13 +160,15 @@ export const useStore = create<StoreState>()(
       visitors: MOCK_VISITORS,
 
       addVisitor: (visitor) => {
-        set({ visitors: [...get().visitors, visitor] })
+        const newVisitors = [...get().visitors, visitor]
+        set({ visitors: newVisitors })
+        syncSharedState({ ...get() })
       },
 
       updateVisitor: (id, updates) => {
-        set({
-          visitors: get().visitors.map((v) => (v.id === id ? { ...v, ...updates } : v)),
-        })
+        const updatedVisitors = get().visitors.map((v) => (v.id === id ? { ...v, ...updates } : v))
+        set({ visitors: updatedVisitors })
+        syncSharedState({ ...get() })
       },
 
       getActiveVisitors: () => {
@@ -152,7 +183,9 @@ export const useStore = create<StoreState>()(
       purchases: MOCK_PURCHASES,
 
       addPurchase: (purchase) => {
-        set({ purchases: [...get().purchases, purchase] })
+        const newPurchases = [...get().purchases, purchase]
+        set({ purchases: newPurchases })
+        syncSharedState({ ...get() })
       },
 
       // Time tracking
@@ -256,6 +289,7 @@ export const useStore = create<StoreState>()(
         const newUsers = [...get().users, user]
         set({ users: newUsers })
         console.log("[v0] Users after adding:", newUsers)
+        syncSharedState({ ...get() })
       },
 
       updateUser: (id, updates) => {
@@ -279,11 +313,22 @@ export const useStore = create<StoreState>()(
     {
       name: "parke-tr3s-storage",
       merge: (persistedState: any, currentState: StoreState) => {
+        let sharedData = null
+        try {
+          if (typeof window !== "undefined") {
+            const stored = sessionStorage.getItem(SHARED_STORAGE_KEY)
+            sharedData = stored ? JSON.parse(stored) : null
+          }
+        } catch (e) {
+          console.log("[v0] Could not load shared state:", e)
+        }
+
         return {
           ...currentState,
           ...persistedState,
-          // Always merge MOCK_USERS with persisted users
-          users: mergeUsers(persistedState?.users),
+          users: mergeUsers(persistedState?.users || sharedData?.users),
+          visitors: sharedData?.visitors || persistedState?.visitors || currentState.visitors,
+          purchases: sharedData?.purchases || persistedState?.purchases || currentState.purchases,
         }
       },
       partialize: (state) => ({

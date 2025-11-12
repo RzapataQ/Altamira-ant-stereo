@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useStore } from "@/lib/store"
 import { parseQRData, isQRFromToday, formatQRDate } from "@/lib/qr-generator"
+import { validatePurchase } from "@/lib/qr-validation"
 import { ArrowLeft, CheckCircle2, XCircle, QrCode, AlertTriangle, Camera } from "lucide-react"
 import Link from "next/link"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -24,7 +25,7 @@ export default function CheckInPage() {
   const [result, setResult] = useState<{ success: boolean; message: string; visitor?: any; isOldQR?: boolean } | null>(
     null,
   )
-  const { visitors, startSession } = useStore()
+  const { visitors, currentUser, startSession } = useStore()
 
   const handleScan = (qrData: string) => {
     setScanning(true)
@@ -53,42 +54,35 @@ export default function CheckInPage() {
         return
       }
 
+      const validationResult = validatePurchase(qrData, currentUser?.username || "unknown")
+
+      if (!validationResult.success) {
+        setResult({
+          success: false,
+          message: validationResult.message,
+        })
+        setScanning(false)
+        return
+      }
+
+      // Find visitor to get full details
       const visitor = visitors.find((v) => v.id === parsed.visitorId)
 
       if (!visitor) {
         setResult({
           success: false,
-          message: "No se encontró ninguna entrada con este código.",
+          message: "No se encontró la información del visitante en el sistema.",
         })
         setScanning(false)
         return
       }
 
-      if (visitor.status === "finished") {
-        setResult({
-          success: false,
-          message: "Esta entrada ya ha sido utilizada y el tiempo ha finalizado.",
-          visitor,
-        })
-        setScanning(false)
-        return
-      }
-
-      if (visitor.status === "active") {
-        setResult({
-          success: true,
-          message: "Entrada válida. El visitante ya está activo en el parque.",
-          visitor,
-        })
-        setScanning(false)
-        return
-      }
-
+      // Start session for this visitor
       startSession(visitor.id)
 
       setResult({
         success: true,
-        message: "Entrada válida. Acceso concedido.",
+        message: `Entrada válida. ¡Bienvenido ${visitor.child.name}!`,
         visitor,
       })
       setScanning(false)
