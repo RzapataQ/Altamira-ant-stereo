@@ -144,15 +144,26 @@ export const useStore = create<StoreState>()(
       logout: () => set({ currentUser: null }),
 
       changePassword: (userId, newPassword) => {
+        console.log("[v0] Changing password for user:", userId)
+        console.log("[v0] Current users before update:", get().users)
+
         const user = get().users.find((u) => u.id === userId)
         if (user) {
-          get().updateUser(userId, { password: newPassword })
+          // Update user in the users array
+          const updatedUsers = get().users.map((u) => (u.id === userId ? { ...u, password: newPassword } : u))
+          set({ users: updatedUsers })
+
+          // Also update currentUser if it's the same user
           const currentUser = get().currentUser
           if (currentUser && currentUser.id === userId) {
             set({ currentUser: { ...currentUser, password: newPassword } })
           }
+
+          console.log("[v0] Password changed successfully")
+          console.log("[v0] Updated users:", get().users)
           return true
         }
+        console.log("[v0] User not found for password change")
         return false
       },
 

@@ -60,6 +60,7 @@ export default function AdminPage() {
   const addCamera = useStore((state) => state.addCamera)
   const updateCamera = useStore((state) => state.updateCamera)
   const deleteCamera = useStore((state) => state.deleteCamera)
+  const changePassword = useStore((state) => state.changePassword)
   const router = useRouter()
 
   const [editedMessage, setEditedMessage] = useState(announcementMessage)
@@ -211,14 +212,20 @@ export default function AdminPage() {
 
     if (editingWorker) {
       // Editing existing user
+      console.log("[v0] Editing worker:", editingWorker.id)
       const updates: any = {
         username: workerForm.username,
         role: workerForm.role,
       }
       if (workerForm.password) {
+        console.log("[v0] Password provided for update")
         updates.password = workerForm.password
+        changePassword(editingWorker.id, workerForm.password)
       }
-      updateUser(editingWorker.id, updates)
+
+      if (Object.keys(updates).length > 0) {
+        updateUser(editingWorker.id, updates)
+      }
     } else {
       // Creating new user
       const newUser = {
