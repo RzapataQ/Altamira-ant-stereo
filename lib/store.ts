@@ -133,7 +133,7 @@ const mergeUsers = (persistedUsers: User[] | undefined): User[] => {
     return MOCK_USERS
   }
 
-  // Always include MOCK_USERS (admin) and merge with persisted users
+  // Always include MOCK_USERS (admin and super_admin) and merge with persisted users
   const mockUserIds = new Set(MOCK_USERS.map((u) => u.id))
   const additionalUsers = persistedUsers.filter((u) => !mockUserIds.has(u.id))
 

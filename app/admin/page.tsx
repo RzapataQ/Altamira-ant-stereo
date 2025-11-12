@@ -91,6 +91,9 @@ export default function AdminPage() {
     name: "",
     location: "",
     url: "",
+    wifiSSID: "",
+    wifiQR: "",
+    connectionMethod: "manual" as "manual" | "wifi" | "qr",
   })
   const [showPassword, setShowPassword] = useState<Record<string, boolean>>({})
   const [passwordChangeAlert, setPasswordChangeAlert] = useState("")
@@ -262,10 +265,13 @@ export default function AdminPage() {
         name: camera.name,
         location: camera.location,
         url: camera.url,
+        wifiSSID: camera.wifiSSID || "",
+        wifiQR: camera.wifiQR || "",
+        connectionMethod: camera.wifiSSID || camera.wifiQR ? (camera.wifiQR ? "qr" : "wifi") : "manual",
       })
     } else {
       setEditingCamera(null)
-      setCameraForm({ name: "", location: "", url: "" })
+      setCameraForm({ name: "", location: "", url: "", wifiSSID: "", wifiQR: "", connectionMethod: "manual" })
     }
     setIsCameraDialogOpen(true)
   }
@@ -283,6 +289,9 @@ export default function AdminPage() {
       url: cameraForm.url || `https://example.com/camera/${Date.now()}`,
       active: true,
       createdAt: new Date(),
+      wifiSSID: cameraForm.connectionMethod === "wifi" ? cameraForm.wifiSSID : "",
+      wifiQR: cameraForm.connectionMethod === "qr" ? cameraForm.wifiQR : "",
+      connectionMethod: cameraForm.connectionMethod,
     }
 
     if (editingCamera) {
@@ -292,7 +301,7 @@ export default function AdminPage() {
     }
 
     setIsCameraDialogOpen(false)
-    setCameraForm({ name: "", location: "", url: "" })
+    setCameraForm({ name: "", location: "", url: "", wifiSSID: "", wifiQR: "", connectionMethod: "manual" })
   }
 
   const handleDeleteCamera = (id: string) => {
@@ -796,7 +805,7 @@ export default function AdminPage() {
                   <Video className="h-5 w-5" />
                   Cámaras de Vigilancia
                 </CardTitle>
-                <CardDescription>Gestiona los puntos de vigilancia del parque</CardDescription>
+                <CardDescription>Conecta cámaras por WiFi, QR o ingresa manualmente</CardDescription>
               </div>
               <Dialog open={isCameraDialogOpen} onOpenChange={setIsCameraDialogOpen}>
                 <DialogTrigger asChild>
@@ -809,34 +818,112 @@ export default function AdminPage() {
                   <DialogHeader>
                     <DialogTitle>{editingCamera ? "Editar Cámara" : "Nueva Cámara"}</DialogTitle>
                     <DialogDescription>
-                      {editingCamera ? "Modifica la cámara" : "Agrega una nueva cámara"}
+                      Conecta una cámara por WiFi, escanea su QR o ingresa los datos manualmente
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
                     <div className="space-y-2">
-                      <Label htmlFor="camera-name">Nombre</Label>
-                      <Input
-                        id="camera-name"
-                        value={cameraForm.name}
-                        onChange={(e) => setCameraForm({ ...cameraForm, name: e.target.value })}
-                        placeholder="Entrada Principal"
-                      />
+                      <Label htmlFor="connection-method">Método de Conexión</Label>
+                      <Select
+                        value={cameraForm.connectionMethod}
+                        onValueChange={(value: any) => setCameraForm({ ...cameraForm, connectionMethod: value })}
+                      >
+                        <SelectTrigger id="connection-method">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="manual">Manual</SelectItem>
+                          <SelectItem value="wifi">WiFi</SelectItem>
+                          <SelectItem value="qr">Escanear QR</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="camera-location">Ubicación</Label>
-                      <Input
-                        id="camera-location"
-                        value={cameraForm.location}
-                        onChange={(e) => setCameraForm({ ...cameraForm, location: e.target.value })}
-                        placeholder="Entrada"
-                      />
-                    </div>
+
+                    {/* WiFi Connection */}
+                    {cameraForm.connectionMethod === "wifi" && (
+                      <div className="space-y-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <Label htmlFor="wifi-ssid">Red WiFi (SSID)</Label>
+                        <Input
+                          id="wifi-ssid"
+                          value={cameraForm.wifiSSID}
+                          onChange={(e) => setCameraForm({ ...cameraForm, wifiSSID: e.target.value })}
+                          placeholder="Ej: Parke-TR3S-5G"
+                        />
+                        <p className="text-xs text-blue-700 mt-2">
+                          Ingresa el nombre de la red WiFi donde se conectará la cámara
+                        </p>
+                      </div>
+                    )}
+
+                    {/* QR Connection */}
+                    {cameraForm.connectionMethod === "qr" && (
+                      <div className="space-y-2 p-3 bg-green-50 rounded-lg border border-green-200">
+                        <Label htmlFor="camera-qr">Escanear QR de Cámara</Label>
+                        <Input
+                          id="camera-qr"
+                          value={cameraForm.wifiQR}
+                          onChange={(e) => setCameraForm({ ...cameraForm, wifiQR: e.target.value })}
+                          placeholder="Escanea el código QR de la cámara"
+                        />
+                        <p className="text-xs text-green-700 mt-2">
+                          Usa la cámara de tu dispositivo para escanear el código QR de la cámara de vigilancia
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Manual Entry */}
+                    {cameraForm.connectionMethod === "manual" && (
+                      <>
+                        <div className="space-y-2">
+                          <Label htmlFor="camera-name">Nombre</Label>
+                          <Input
+                            id="camera-name"
+                            value={cameraForm.name}
+                            onChange={(e) => setCameraForm({ ...cameraForm, name: e.target.value })}
+                            placeholder="Entrada Principal"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="camera-location">Ubicación</Label>
+                          <Input
+                            id="camera-location"
+                            value={cameraForm.location}
+                            onChange={(e) => setCameraForm({ ...cameraForm, location: e.target.value })}
+                            placeholder="Entrada"
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {/* Common fields for all methods */}
+                    {cameraForm.connectionMethod !== "manual" && (
+                      <>
+                        <div className="space-y-2">
+                          <Label htmlFor="camera-name-connect">Nombre de Cámara</Label>
+                          <Input
+                            id="camera-name-connect"
+                            value={cameraForm.name}
+                            onChange={(e) => setCameraForm({ ...cameraForm, name: e.target.value })}
+                            placeholder="Entrada Principal"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="camera-location-connect">Ubicación</Label>
+                          <Input
+                            id="camera-location-connect"
+                            value={cameraForm.location}
+                            onChange={(e) => setCameraForm({ ...cameraForm, location: e.target.value })}
+                            placeholder="Entrada"
+                          />
+                        </div>
+                      </>
+                    )}
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setIsCameraDialogOpen(false)}>
                       Cancelar
                     </Button>
-                    <Button onClick={handleSaveCamera}>Guardar</Button>
+                    <Button onClick={handleSaveCamera}>Conectar Cámara</Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -857,6 +944,8 @@ export default function AdminPage() {
                         <div>
                           <p className="font-medium">{camera.name}</p>
                           <p className="text-sm text-muted-foreground">{camera.location}</p>
+                          {camera.wifiSSID && <p className="text-xs text-blue-600 mt-1">WiFi: {camera.wifiSSID}</p>}
+                          {camera.wifiQR && <p className="text-xs text-green-600 mt-1">QR: Conectada</p>}
                         </div>
                         <Badge>{camera.active ? "Activa" : "Inactiva"}</Badge>
                       </div>

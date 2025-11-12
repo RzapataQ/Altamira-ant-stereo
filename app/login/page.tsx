@@ -81,12 +81,14 @@ export default function LoginPage() {
               {error && <p className="text-sm text-destructive">{error}</p>}
 
               <div className="bg-muted p-3 rounded-md text-sm">
-                <p className="font-medium mb-1">Credenciales de administrador:</p>
+                <p className="font-medium mb-2">Credenciales disponibles:</p>
                 <p className="text-muted-foreground">
-                  Usuario: <span className="font-mono">admin</span>
+                  Admin - Usuario: <span className="font-mono">admin</span> | Contraseña:{" "}
+                  <span className="font-mono">admin</span>
                 </p>
                 <p className="text-muted-foreground">
-                  Contraseña: <span className="font-mono">admin</span>
+                  Super Admin - Usuario: <span className="font-mono">superadmin</span> | Contraseña:{" "}
+                  <span className="font-mono">superadmin</span>
                 </p>
               </div>
             </CardContent>

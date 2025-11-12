@@ -50,6 +50,15 @@ export const MOCK_USERS: User[] = [
     lastLogin: new Date(),
     active: true,
   },
+  {
+    id: "2",
+    username: "superadmin",
+    password: "superadmin",
+    role: "super_admin",
+    createdAt: new Date("2024-01-01"),
+    lastLogin: new Date(),
+    active: true,
+  },
 ]
 
 export const MOCK_VISITORS: Visitor[] = []
